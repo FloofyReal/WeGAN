@@ -57,7 +57,7 @@ class InputPipeline(object):
 
         path_linux = self._file_content[0] + '/' + 'train_' + self.params + '.pkl'
         path = self._file_content[0] + '\\' + 'train_' + self.params + '.pkl'
-        print('Path to loaded file: ', path)
+        print('Path to loaded file: ', path_linux)
 
         with open(path, 'rb') as f:
                 data = pickle.load(f, encoding='latin1')

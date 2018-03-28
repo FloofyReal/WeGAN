@@ -39,7 +39,7 @@ flags.DEFINE_string('root_dir', '.',
                     'Directory containing all videos and the index file')
 flags.DEFINE_string('index_file', 'my-index-file.txt', 'Index file referencing all videos relative to root_dir')
 
-flags.DEFINE_string('experiment_name', 'temperature_32x32_1step_fin_v1', 'Log directory')
+flags.DEFINE_string('experiment_name', 'temperature_32x32_1step_fin_v2', 'Log directory')
 flags.DEFINE_integer('output_every', 25, 'output loss to stdout every xx steps')
 flags.DEFINE_integer('sample_every', 200, 'generate random samples from generator every xx steps')
 flags.DEFINE_integer('save_model_every', 200, 'save complete model and parameters every xx steps')
@@ -52,7 +52,7 @@ params = flags.FLAGS
 # make sure all necessary directories are created
 #
 # experiment_dir = os.path.join('.', params.experiment_name)
-path_dir = os.path.join('c:', os.sep, 'experiments')
+path_dir = '/rafajdus/experiments'
 experiment_dir = os.path.join(path_dir, params.experiment_name)
 checkpoint_dir = os.path.join(experiment_dir, 'checkpoints')
 sample_dir = os.path.join(experiment_dir, 'samples')

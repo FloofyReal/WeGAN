@@ -1,1 +1,1 @@
-C:\experiments\data_parsed\32x32
+/rafajdus/data_parsed/32x32
