@@ -52,7 +52,7 @@ params = flags.FLAGS
 # make sure all necessary directories are created
 #
 # experiment_dir = os.path.join('.', params.experiment_name)
-path_dir = '/rafajdus/experiments'
+path_dir = '/home/rafajdus/experiments'
 experiment_dir = os.path.join(path_dir, params.experiment_name)
 checkpoint_dir = os.path.join(experiment_dir, 'checkpoints')
 sample_dir = os.path.join(experiment_dir, 'samples')
