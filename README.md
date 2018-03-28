@@ -4,7 +4,6 @@ Using Generative Adversarial Networks (Improved Video GAN) for Weather Forecast
 Base of the code base is [Improved Video GAN github](https://github.com/bernhard2202/improved-video-gan),
 because of their nicely kept repo and usage of the Tensorflow.
 
-I will try to reconstruct the repo to Python3, as well, the newest Tensorflow (TODO).
 
 
 
