@@ -1,1 +1,1 @@
-/rafajdus/data_parsed/32x32
+/home/rafajdus/data_parsed/32x32

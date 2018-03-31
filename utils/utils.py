@@ -3,13 +3,9 @@ utility functions
 """
 
 import tensorflow as tf
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
 import os
 import pickle
 import numpy as np
-from PIL import Image
-from mpl_toolkits.basemap import Basemap
 
 
 def saveGIFBatch(batch, directory, name=''):
