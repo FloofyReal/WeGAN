@@ -133,7 +133,10 @@ def leaky_relu(x, leak=0.2):
 
 def dis_block(input, input_dim, output_dim, name, reuse=False, normalize=True):
     with tf.variable_scope(name, reuse=reuse) as vs:
-        result = conv3d(input, input_dim, output_dim, name='conv3d')
+        if ddd:
+            result = conv3d(input, input_dim, output_dim, name='conv3d')
+        else:
+            result = conv2d(input, input_dim, output_dim, name='conv2d')
         if normalize:
             result = tf.contrib.layers.layer_norm(result, reuse=reuse, scope=vs)
         result = leaky_relu(result)
