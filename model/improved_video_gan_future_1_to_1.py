@@ -69,22 +69,26 @@ class ImprovedVideoGANFutureOne(object):
             self.z_ = tf.reshape(self.en_h3, [self.batch_size, 2, 2, 1024])
             print(self.z_.get_shape().as_list())
 
-            self.fg_h1 = tf.image.resize_images(self.z_, [4,4], method=tf.image.ResizeMethod.BICUBIC)
+            self.fg_h1 = tf.image.resize_images(self.z_, [4,4], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h1 = conv2d(self.fg_h1, 1024, 512, d_h=1, d_w=1, name="gen_conv1")
             self.fg_h1 = tf.nn.relu(tf.contrib.layers.batch_norm(self.fg_h1, scope='g_f_bn1'), name='g_f_relu1')
             add_activation_summary(self.fg_h1)
             print(self.fg_h1.get_shape().as_list())
 
-            self.fg_h2 = tf.image.resize_images(self.fg_h1, [8,8], method=tf.image.ResizeMethod.BICUBIC)
+            self.fg_h2 = tf.image.resize_images(self.fg_h1, [8,8], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h2 = conv2d(self.fg_h2, 512, 256, d_h=1, d_w=1, name="gen_conv2")
             self.fg_h2 = tf.nn.relu(tf.contrib.layers.batch_norm(self.fg_h2, scope='g_f_bn2'), name='g_f_relu2')
             add_activation_summary(self.fg_h2)
             print(self.fg_h2.get_shape().as_list())
 
-            self.fg_h3 = tf.image.resize_images(self.fg_h2, [16,16], method=tf.image.ResizeMethod.BICUBIC)
+            self.fg_h3 = tf.image.resize_images(self.fg_h2, [16,16], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h3 = conv2d(self.fg_h3, 256, 128, d_h=1, d_w=1, name="gen_conv3")
             self.fg_h3 = tf.nn.relu(tf.contrib.layers.batch_norm(self.fg_h3, scope='g_f_bn3'), name='g_f_relu3')
             add_activation_summary(self.fg_h3)
             print(self.fg_h3.get_shape().as_list())
 
-            self.fg_h4 = tf.image.resize_images(self.fg_h2, [self.crop_size,self.crop_size], method=tf.image.ResizeMethod.BICUBIC)
+            self.fg_h4 = tf.image.resize_images(self.fg_h2, [self.crop_size,self.crop_size], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h4 = conv2d(self.fg_h4, 128, self.channels, d_h=1, d_w=1, name="gen_conv4")
             self.fg_fg = tf.nn.tanh(self.fg_h4, name='g_f_actication')
             print(self.fg_fg.get_shape().as_list())
 
@@ -114,8 +118,8 @@ class ImprovedVideoGANFutureOne(object):
         self.input_images = tf.placeholder(tf.float32, [self.batch_size, self.crop_size, self.crop_size, self.channels])
         self.videos_fake, self.gen_reg, self.generator_variables = self.generator(self.input_images)
 
-        self.fake_min = self.videos_fake.min()
-        self.fake_max = self.videos_fake.max()
+        self.fake_min = tf.reduce_min(self.videos_fake)
+        self.fake_max = tf.reduce_max(self.videos_fake)
 
         self.d_real, self.discriminator_variables = self.discriminator(self.videos, reuse=False)
         self.d_fake, _ = self.discriminator(self.videos_fake, reuse=True)
