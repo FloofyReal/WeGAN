@@ -131,7 +131,7 @@ def leaky_relu(x, leak=0.2):
     return tf.maximum(x, x * leak)
 
 
-def dis_block(input, input_dim, output_dim, name, reuse=False, normalize=True):
+def dis_block(input, input_dim, output_dim, name, reuse=False, normalize=True, ddd=True):
     with tf.variable_scope(name, reuse=reuse) as vs:
         if ddd:
             result = conv3d(input, input_dim, output_dim, name='conv3d')
