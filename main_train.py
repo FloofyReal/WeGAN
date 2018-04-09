@@ -8,6 +8,7 @@ from data.input_pipeline import InputPipeline
 
 from model.improved_video_gan import ImprovedVideoGAN
 from model.improved_video_gan_future import ImprovedVideoGANFuture
+from model.improved_video_gan_future_1_to_1 import ImprovedVideoGANFutureOne
 
 import os
 import re
@@ -22,7 +23,7 @@ print('Go Go Power Rangers!!!')
 # input flags
 #
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'predict', 'one of [generate, predict, bw2rgb, inpaint]')
+flags.DEFINE_string('mode', 'predict', 'one of [predict, predict_1to1]')
 flags.DEFINE_integer('num_epochs', 50, 'Number of epochs to train [15]')
 flags.DEFINE_integer('batch_size', 64, 'Batch size [16]')
 flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
@@ -39,7 +40,7 @@ flags.DEFINE_string('root_dir', '.',
                     'Directory containing all videos and the index file')
 flags.DEFINE_string('index_file', 'my-index-file.txt', 'Index file referencing all videos relative to root_dir')
 
-flags.DEFINE_string('experiment_name', 'temperature_32x32_1step_fin_v2', 'Log directory')
+flags.DEFINE_string('experiment_name', 'testytest_deleteme', 'Log directory')
 flags.DEFINE_integer('output_every', 25, 'output loss to stdout every xx steps')
 flags.DEFINE_integer('sample_every', 200, 'generate random samples from generator every xx steps')
 flags.DEFINE_integer('save_model_every', 200, 'save complete model and parameters every xx steps')
@@ -85,16 +86,19 @@ print("DATAPIPELINE DONE")
 # set up model
 #
 
-if params.mode == 'generate':
-    model = ImprovedVideoGAN(batch,
-                             batch_size=params.batch_size,
-                             frame_size=params.frame_count,
-                             crop_size=params.crop_size,
-                             learning_rate=params.learning_rate,
-                             z_dim=params.z_dim,
-                             beta1=params.beta1)
-elif params.mode == 'predict':
+if params.mode == 'predict':
     model = ImprovedVideoGANFuture(input_batch=batch,
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   minn=minn,
+                                   maxx=maxx,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+elif params.mode == 'predict_1to1':
+    model = ImprovedVideoGANFutureOne(input_batch=batch,
                                    batch_size=params.batch_size,
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,
