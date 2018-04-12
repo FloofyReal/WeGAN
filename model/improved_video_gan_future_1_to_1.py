@@ -113,11 +113,16 @@ class ImprovedVideoGANFutureOne(object):
     def build_model(self):
         print("Setting up model...")
 
+        # input_images = First frame of video
         self.input_images = tf.placeholder(tf.float32, [self.batch_size, self.crop_size, self.crop_size, self.channels])
         self.videos_fake, self.gen_reg, self.generator_variables = self.generator(self.input_images)
 
         self.fake_min = tf.reduce_min(self.videos_fake)
         self.fake_max = tf.reduce_max(self.videos_fake)
+
+        print('Shapes of videos:')
+        print('Original:' + self.videos.shape)
+        print('Generated:' + self.videos_fake.shape)
 
         self.d_real, self.discriminator_variables = self.discriminator(self.videos, reuse=False)
         self.d_fake, _ = self.discriminator(self.videos_fake, reuse=True)
@@ -127,10 +132,6 @@ class ImprovedVideoGANFutureOne(object):
         # self.g_cost = self.g_cost_pure + 1000 * self.gen_reg
 
         self.d_cost = tf.reduce_mean(self.d_fake) - tf.reduce_mean(self.d_real)
-
-        print('Shapes of fuckeres:')
-        print(self.videos.shape)
-        print(self.videos_fake.shape)
 
         self.rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(self.videos, self.videos_fake))))
 
