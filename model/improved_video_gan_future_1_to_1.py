@@ -100,8 +100,6 @@ class ImprovedVideoGANFutureOne(object):
     def discriminator(self, video, reuse=False):
         with tf.variable_scope('d_', reuse=reuse) as vs:
             initial_dim = self.crop_size
-            print(video)
-            print(video.shape)
             video = tf.reshape(video, [self.batch_size, self.crop_size, self.crop_size, self.channels])
             d_h0 = dis_block(video, self.channels, initial_dim, 'block1', reuse=reuse, ddd=False)
             d_h1 = dis_block(d_h0, initial_dim, initial_dim * 2, 'block2', reuse=reuse, ddd=False)
