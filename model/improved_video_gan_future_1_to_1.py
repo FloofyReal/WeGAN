@@ -100,12 +100,12 @@ class ImprovedVideoGANFutureOne(object):
     def discriminator(self, video, reuse=False):
         with tf.variable_scope('d_', reuse=reuse) as vs:
             initial_dim = self.crop_size
-            video = tf.reshape(video, [self.batch_size, self.crop_size, self.crop_size, self.channels])
-            d_h0 = dis_block(video, self.channels, initial_dim, 'block1', reuse=reuse, ddd=False)
-            d_h1 = dis_block(d_h0, initial_dim, initial_dim * 2, 'block2', reuse=reuse, ddd=False)
-            d_h2 = dis_block(d_h1, initial_dim * 2, initial_dim * 4, 'block3', reuse=reuse, ddd=False)
-            d_h3 = dis_block(d_h2, initial_dim * 4, initial_dim * 8, 'block4', reuse=reuse, ddd=False)
-            d_h4 = dis_block(d_h3, initial_dim * 8, 1, 'block5', reuse=reuse, normalize=False, ddd=False)
+            video = tf.reshape(video, [self.batch_size, self.frame_size, self.crop_size, self.crop_size, self.channels])
+            d_h0 = dis_block(video, self.channels, initial_dim, 'block1', reuse=reuse, ddd=True)
+            d_h1 = dis_block(d_h0, initial_dim, initial_dim * 2, 'block2', reuse=reuse, ddd=True)
+            d_h2 = dis_block(d_h1, initial_dim * 2, initial_dim * 4, 'block3', reuse=reuse, ddd=True)
+            d_h3 = dis_block(d_h2, initial_dim * 4, initial_dim * 8, 'block4', reuse=reuse, ddd=True)
+            d_h4 = dis_block(d_h3, initial_dim * 8, 1, 'block5', reuse=reuse, normalize=False, ddd=True)
             d_h5 = linear(tf.reshape(d_h4, [self.batch_size, -1]), 1)
         variables = tf.contrib.framework.get_variables(vs)
         return d_h5, variables
