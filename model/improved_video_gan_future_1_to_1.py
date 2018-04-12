@@ -121,8 +121,10 @@ class ImprovedVideoGANFutureOne(object):
         self.fake_max = tf.reduce_max(self.videos_fake)
 
         print('Shapes of videos:')
-        print('Original:' + self.videos.shape)
-        print('Generated:' + self.videos_fake.shape)
+        print('Original:')
+        print(self.videos.shape)
+        print('Generated:')
+        print(self.videos_fake.shape)
 
         self.d_real, self.discriminator_variables = self.discriminator(self.videos, reuse=False)
         self.d_fake, _ = self.discriminator(self.videos_fake, reuse=True)
