@@ -82,7 +82,7 @@ class InputPipeline(object):
         for x in range(len(normal)-self.video_frames):
             seq_tensor = tf.convert_to_tensor(normal[x:self.video_frames+x], np.float32)
             # print(seq_tensor.shape, self.reshape_size)
-            seq_tensor = tf.reshape(seq_tensor, [self.video_frames, self.video_frames, self.reshape_size, self.reshape_size, self.channels])
+            seq_tensor = tf.reshape(seq_tensor, [self.video_frames, self.reshape_size, self.reshape_size, self.channels])
             seq_list.append(seq_tensor)
         print('Shape of 1 frame/state of weather', seq_tensor.shape)
         print('Num of all weather frames/states', len(seq_list))
