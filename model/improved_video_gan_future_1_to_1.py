@@ -87,7 +87,7 @@ class ImprovedVideoGANFutureOne(object):
             add_activation_summary(self.fg_h3)
             print(self.fg_h3.get_shape().as_list())
 
-            self.fg_h4 = tf.image.resize_images(self.fg_h2, [self.crop_size,self.crop_size], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h4 = tf.image.resize_images(self.fg_h3, [self.crop_size,self.crop_size], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
             self.fg_h4 = conv2d(self.fg_h4, 128, self.channels, d_h=1, d_w=1, name="gen_conv4")
             self.fg_fg = tf.nn.tanh(self.fg_h4, name='g_f_actication')
             print(self.fg_fg.get_shape().as_list())
