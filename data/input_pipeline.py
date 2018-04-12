@@ -95,5 +95,5 @@ class InputPipeline(object):
         video_batch = tf.train.batch([seq_list], batch_size=self.batch_size,
                                      # TODO(Bernhard): check if read_threads here actually speeds things up
                                      num_threads=self.read_threads, capacity=self.batch_size * 4, enqueue_many=True,
-                                     shapes=[self.video_frames, self.reshape_size, self.reshape_size, self.channels])
+                                     shapes=[self.video_frames, self.video_frames, self.reshape_size, self.reshape_size, self.channels])
         return video_batch, minn, maxx
