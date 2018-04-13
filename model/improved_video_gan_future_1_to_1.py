@@ -127,6 +127,10 @@ class ImprovedVideoGANFutureOne(object):
         print(self.videos_fake.shape)
 
         self.d_real, self.discriminator_variables = self.discriminator(self.videos, reuse=False)
+
+        # merging initial frame and generated to create full forecast "video"
+        self.videos_fake = tf.stack([self.input_images, self.videos_fake], axis=1)
+
         self.d_fake, _ = self.discriminator(self.videos_fake, reuse=True)
 
         self.g_cost_pure = -tf.reduce_mean(self.d_fake)
