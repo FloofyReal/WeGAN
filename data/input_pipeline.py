@@ -56,8 +56,12 @@ class InputPipeline(object):
         print('Path to loaded file: ', path_linux)
 
         with open(path_linux, 'rb') as f:
-                data = pickle.load(f, encoding='latin1')
-        return data
+                data = pickle.load(f, encoding='bytes')
+        
+        data_values = [i[0] for i in data]
+        data_times = [i[1] for i in data]
+
+        return data_values, data_times
 
     def __normalize_v2(self, data):
         minn = np.amin(data)
@@ -90,7 +94,7 @@ class InputPipeline(object):
         return seq_list, minn, maxx
 
     def input_pipeline(self):
-        data = self.__init_dataset()
+        data, times = self.__init_dataset()
         seq_list, minn, maxx = self.__preprocess(data)
         video_batch = tf.train.batch([seq_list], batch_size=self.batch_size,
                                      # TODO(Bernhard): check if read_threads here actually speeds things up
