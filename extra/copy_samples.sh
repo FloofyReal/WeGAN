@@ -1,4 +1,7 @@
 #!/bin/bash
-# Copy local git repository into docker - run with pull
+# Copy logs from docker to local -- run after experiments with scp to your env
 
-docker cp condescending_minsky:/home/rafajdus/experiments//samples /home/rafajdus/experiments//samples
+name=$1
+exp=$2
+
+docker cp $name:/home/rafajdus/experiments/$exp/samples ../../experiments/$exp 
