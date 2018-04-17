@@ -52,7 +52,7 @@ class InputPipeline(object):
         based on chosen parameter - defined in init
         """
 
-        path_linux = self._file_content[0] + '/' + 'train_' + self.params + '.pkl'
+        path_linux = self._file_content[0] + '/' + 'train_' + self.params + '_' + '32x32' + '.pkl'
         print('Path to loaded file: ', path_linux)
 
         with open(path_linux, 'rb') as f:
