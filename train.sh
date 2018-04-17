@@ -1,8 +1,4 @@
 #!/bin/bash
-# Copy local git repository into docker - run with pull
-
-set CUDA_VISIBLE_DEVICES=0
-export CUDA_VISIBLE_DEVICES=0
 
 name=$1
 
