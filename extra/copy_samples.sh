@@ -1,5 +1,5 @@
 #!/bin/bash
-# Copy logs from docker to local -- run after experiments with scp to your env
+# Copy samples from docker to local -- run after experiments with scp to your env
 
 name=$1
 exp=$2
