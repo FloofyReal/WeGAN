@@ -2,9 +2,12 @@ import pickle
 import numpy as np
 
 def split_dataset(data, valid=0.1, test=0.1):
-    x = data
+    if test == 0 and valid == 0:
+        return data
     
+    x = dat
     size = len(x)
+    
     # split
     train_features = x[:int(-(size * (test+valid)))]
     valid_features= x[int(-(size * (test+valid))): int(-size*test)]
@@ -12,33 +15,96 @@ def split_dataset(data, valid=0.1, test=0.1):
     
     return train_features, valid_features, test_features
 
-dirr = '32x32'
-# dirr = '64x64'
+def split_time_dataset(data, test=0.1):
+    x = data
+    
+    # split into 9 years of train and 1 year of test
+    train_features = x[:-8760]
+    test_features = x[-8760:]
+    
+    return train_features, test_features
 
-params='Temperature'
+def save_dataset(train_data, valid_data, test_data, source_path, param, dirr):
+    # saving dataset as parts
+    
+    if train_data:
+        train_name = source_path + 'train_' + param + '_' + dirr + '.pkl'
+        with open(train_name,'wb') as f:
+            pickle.dump(train_data, f, pickle.HIGHEST_PROTOCOL)
+            print('saved ' + train_name)
+            
+    if test_data:
+        test_name = source_path + 'test_' + param + '_' + dirr + '.pkl'
+        with open(test_name,'wb') as f:
+            pickle.dump(test_data, f, pickle.HIGHEST_PROTOCOL)
+            print('saved ' + test_name)
+
+    if valid_data:
+        valid_name = source_path + 'valid_' + param + '_' + dirr + '.pkl'
+        with open(valid_name,'wb') as f:
+            pickle.dump(valid_data, f, pickle.HIGHEST_PROTOCOL)
+            print('saved ' + valid_name)
+
+
+# dirr = '32x32'
+dirr = '64x64'
+
+params = ['Temperature', 'Specific_humidity', 'Cloud_cover']
+params_64 = ['Geopotential', 'Logarithm_of_surface_pressure']
 
 # path to whole .pkl of data
-source_path = '../PARSED/' + dirr + '/'
-fin_file = params + '.pkl'
+source_path = '../../PARSED/' + dirr + '/'
 
-# loading dataset
-with open(source_path + fin_file, 'rb') as f:
-    data = pickle.load(f, encoding='latin1')
-
-# supervised learning - 80:10:10
+# Supervised learning
+# 80:10:10
 # data_train, data_valid, data_test = split_dataset(data, valid=0.1, test=0.1)
+# save_dataset(data_train, data_valid, data_test, source_path, params, dirr)
 
-# unsupervised learning - no valid - 90:10
-data_train, data_valid, data_test = split_dataset(data, valid=0, test=0.1)
 
-# saving dataset as parts
-with open(source_path + 'train_temp_32.pkl','wb') as f:
-    pickle.dump(data_train, f, pickle.HIGHEST_PROTOCOL)
+# Unsupervised learning
+for param in params:
+    fin_file = param + '.pkl'
+    
+    print(fin_file)
+    # loading dataset
+    with open(source_path + fin_file, 'rb') as f:
+        data = pickle.load(f, encoding='bytes')
 
-with open(source_path + 'test_temp_32.pkl','wb') as f:
-    pickle.dump(test_data, f, pickle.HIGHEST_PROTOCOL)
+    # no valid - 90:10
+    
+    # NO TIME
+    # data_train, data_valid, data_test = split_dataset(data, valid=0, test=0.1)
+    # save_dataset(data_train, data_valid, data_test, source_path, params, dirr)
+    
+    # WITH TIME
+    data_train_time, data_test_time = split_time_dataset(data, test=0.1)
+    print(len(data_train_time))
+    print(data_train_time[0][1].ctime())
+    
+    print(len(data_test_time))
+    print(data_test_time[0][1].ctime())
+    save_dataset(data_train_time, [], data_test_time, source_path, param, dirr)
 
-"""
-with open('valid_temp_32.pkl','wb') as f:
-    pickle.dump(valid_data, f, pickle.HIGHEST_PROTOCOL)
-"""
+if dirr == '64x64':
+    for param in params_64:
+        fin_file = param + '.pkl'
+
+        print(fin_file)
+        # loading dataset
+        with open(source_path + fin_file, 'rb') as f:
+            data = pickle.load(f, encoding='bytes')
+
+        # no valid - 90:10
+
+        # NO TIME
+        # data_train, data_valid, data_test = split_dataset(data, valid=0, test=0.1)
+        # save_dataset(data_train, data_valid, data_test, source_path, params, dirr)
+
+        # WITH TIME
+        data_train_time, data_test_time = split_time_dataset(data, test=0.1)
+        print(len(data_train_time))
+        print(data_train_time[0][1].ctime())
+
+        print(len(data_test_time))
+        print(data_test_time[0][1].ctime())
+        save_dataset(data_train_time, [], data_test_time, source_path, param, dirr)
