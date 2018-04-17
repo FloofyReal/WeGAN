@@ -46,6 +46,8 @@ def save_dataset(train_data, valid_data, test_data, source_path, param, dirr):
             print('saved ' + valid_name)
 
 
+##############################################################################
+# MAIN CHANGABLE VARIABLES
 # dirr = '32x32'
 dirr = '64x64'
 
@@ -53,7 +55,7 @@ params = ['Temperature', 'Specific_humidity', 'Cloud_cover']
 params_64 = ['Geopotential', 'Logarithm_of_surface_pressure']
 
 # path to whole .pkl of data
-source_path = '../../PARSED/' + dirr + '/'
+source_path = '../../data_parsed/' + dirr + '/'
 
 # Supervised learning
 # 80:10:10
