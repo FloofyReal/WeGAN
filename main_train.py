@@ -24,7 +24,7 @@ print('Go Go Power Rangers!!!')
 #
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'predict', 'one of [predict, predict_1to1]')
-flags.DEFINE_integer('num_epochs', 50, 'Number of epochs to train [15]')
+flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train [15]')
 flags.DEFINE_integer('batch_size', 64, 'Batch size [16]')
 flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
 flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
