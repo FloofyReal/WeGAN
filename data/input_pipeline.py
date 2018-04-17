@@ -43,7 +43,7 @@ class InputPipeline(object):
         print(content)
         content = [x.strip() for x in content]
         # shuffle=True origin
-        self._filename_queue = tf.train.string_input_producer(content, shuffle=False, num_epochs=num_epochs)
+        # self._filename_queue = tf.train.string_input_producer(content, shuffle=False, num_epochs=num_epochs)
         self._file_content = content
 
     def __init_dataset(self):
@@ -51,6 +51,7 @@ class InputPipeline(object):
         load weather data from saved pickle file
         based on chosen parameter - defined in init
         """
+        print('Content loaded:', self._file_content)
 
         path_linux = self._file_content[0] + '/' + 'train_' + self.params + '_' + '32x32' + '.pkl'
         print('Path to loaded file: ', path_linux)
