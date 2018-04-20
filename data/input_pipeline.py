@@ -72,7 +72,6 @@ class InputPipeline(object):
         normalized -= 0.5
         return normalized, minn, maxx
 
-
     def __preprocess(self, data):
         """
         takes a image of horizontally stacked video frames and transforms
@@ -80,9 +79,9 @@ class InputPipeline(object):
         [self.video_frames x self.reshape_size x self.reshape_size x self.channels]
         """
         # shape = tf.shape(data)
-        # print(shape)
+        print('Original data shape:', data.shape)
         normal, minn, maxx = self.__normalize_v2(data)
-        normal.shape
+        print('Normalized data shape:', normal.shape)
         seq_list = []
         for x in range(len(normal)-self.video_frames):
             seq_tensor = tf.convert_to_tensor(normal[x:self.video_frames+x], np.float32)
