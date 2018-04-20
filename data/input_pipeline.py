@@ -79,9 +79,9 @@ class InputPipeline(object):
         [self.video_frames x self.reshape_size x self.reshape_size x self.channels]
         """
         # shape = tf.shape(data)
-        print('Original data shape:', data.shape)
+        print('Original data shape:', len(data), data[0].shape)
         normal, minn, maxx = self.__normalize_v2(data)
-        print('Normalized data shape:', normal.shape)
+        print('Normalized data shape:', len(normal), normal[0].shape)
         seq_list = []
         for x in range(len(normal)-self.video_frames):
             seq_tensor = tf.convert_to_tensor(normal[x:self.video_frames+x], np.float32)
