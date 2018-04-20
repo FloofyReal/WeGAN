@@ -62,9 +62,10 @@ init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initial
 sess.run(init_op)
 threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-for i in range(20):
-    print(batch)
-    print(batch.hape)
+for i in range(10):
+    print(str(i*params.batch_size))
+    print(sess.run(batch))
+    print(batch.shape)
     """
     batch_z = np.random.normal(0.0, 1.0, size=[params.batch_size, params.z_dim]).astype(np.float32)
     feed_dict = {model.z_vec: batch_z}
@@ -73,6 +74,7 @@ for i in range(20):
     write_batch(x, sample_dir, 'test_', i, 16, 8)
     """
 
+i = 0
 try:
     while not coord.should_stop():
         print('doing:', i)
