@@ -86,16 +86,12 @@ class InputPipeline(object):
         data_times = np.stack([sins, coss], axis=1)
         data_times = data_times.astype(np.float32)
 
-        features_placeholder = tf.placeholder(data_values.dtype, data_values.shape)
-        time_placeholder = tf.placeholder(data_times.dtype, data_times.shape)
-
-        dataset = tf.data.Dataset.from_tensor_slices((features_placeholder, time_placeholder))
 
         del data
         del data_all
         print('u good to go')
 
-        return dataset, data_values, data_times
+        return data_values, data_times
 
     def __normalize_v2(self, data):
         minn = np.amin(data)
@@ -126,6 +122,6 @@ class InputPipeline(object):
         return seq_list, minn, maxx
 
     def input_pipeline(self):
-        dataset, values, times = self.__init_dataset()
+        values, times = self.__init_dataset()
         # return dataset, 0, 100
-        return dataset, values, times
+        return values, times

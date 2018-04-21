@@ -56,14 +56,19 @@ data_set = InputPipeline(params.root_dir,
                          reshape_size=params.crop_size)
 
 # batch, minn, maxx = data_set.input_pipeline()
-dataset, values, times = data_set.input_pipeline()
-print(dataset.output_types)
-print(dataset.output_shapes)
+values, times = data_set.input_pipeline()
 
 
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
+
+values_placeholder = tf.placeholder(values.dtype, values.shape)
+time_placeholder = tf.placeholder(times.dtype, times.shape)
+
+dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
+print(dataset.output_types)
+print(dataset.output_shapes)
 
 dataset = dataset.batch(32)
 iterator = dataset.make_initializable_iterator()
@@ -75,15 +80,14 @@ next_element = iterator.get_next()
 # Compute for 100 epochs.
 for i in range(10):
     print('Epoch:', i)
-    sess.run(iterator.initializer)
+    sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
 
     k = 0
     while True:
         try:
             k += 1
+            sess.run(next_element)
 
-            sess.run(iterator.initializer, feed_dict={features_placeholder: values,
-                                          time_placeholder: times})
         except tf.errors.OutOfRangeError:
             print('Steps:', k)
             break
