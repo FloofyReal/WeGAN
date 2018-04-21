@@ -61,6 +61,8 @@ class InputPipeline(object):
             with open(path_linux, 'rb') as f:
                     data = pickle.load(f, encoding='bytes')
                     data_all.append(data)
+
+        data = 0
         
         data_values_all = []
         for data in data_all:
@@ -73,19 +75,20 @@ class InputPipeline(object):
             data_values = [i.reshape([1,1,32,32,1]) for i in data_values]
             data_values = np.concatenate(data_values, axis=0)
             
-            seconds_in_day = 24*60*60
-            # data_times = [i.time() for i in data_times]
-            data_times = [i.second + i.minute * 60 + i.hour * 3600 for i in data_times]
-
-            sins = [np.sin(2*np.pi*secs/seconds_in_day) for secs in data_times]
-            coss = [np.cos(2*np.pi*secs/seconds_in_day) for secs in data_times]
-
-            data_times = np.stack([sins, coss], axis=1)
-            data_times = data_times.astype(np.float32)
-
             data_values_all.append(data_values)
 
         data_values = np.concatenate(data_values_all, axis=4)
+
+        data_all = 0
+
+        seconds_in_day = 24*60*60
+        data_times = [i.second + i.minute * 60 + i.hour * 3600 for i in data_times]
+
+        sins = [np.sin(2*np.pi*secs/seconds_in_day) for secs in data_times]
+        coss = [np.cos(2*np.pi*secs/seconds_in_day) for secs in data_times]
+
+        data_times = np.stack([sins, coss], axis=1)
+        data_times = data_times.astype(np.float32)
 
         """
         features_placeholder = tf.placeholder(data_values.dtype, data_values.shape)
@@ -93,10 +96,9 @@ class InputPipeline(object):
 
         dataset = tf.data.Dataset.from_tensor_slices((features_placeholder, time_placeholder))
         """
-        dataset = tf.data.Dataset.from_tensor_slices((data_values, data_times))
         print('u good to go')
 
-        return dataset
+        return tf.data.Dataset.from_tensor_slices((data_values, data_times))
 
     def __normalize_v2(self, data):
         minn = np.amin(data)
