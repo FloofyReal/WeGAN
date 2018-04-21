@@ -52,31 +52,48 @@ class InputPipeline(object):
         load weather data from saved pickle file
         based on chosen parameter - defined in init
         """
-        print('Content loaded:', self._file_content)
+        print('Content loaded:', self.file_content)
 
-        for i in self.channels:
-        path_linux = self._file_content[0] + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
-        print('Path to loaded file: ', path_linux)
+        data_all = []
+        for i in range(self.channels):
+            path_linux = self.file_content[0] + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
+            print('Path to loaded file: ', path_linux)
 
-        with open(path_linux, 'rb') as f:
-                data = pickle.load(f, encoding='bytes')
+            with open(path_linux, 'rb') as f:
+                    data = pickle.load(f, encoding='bytes')
+                    data_all.append(data)
         
-        data_values = [i[0] for i in data]
-        data_times = [i[1] for i in data]
+        data_values_all = []
+        for data in data_all:
+            data_values = [i[0] for i in data]
+            data_times = [i[1] for i in data]
 
-        # print('Data[0] value:', data_values[0])
-        # print('Data[1] value:', data_times[0])
+            # print('Data[0] value:', data_values[0])
+            # print('Data[1] value:', data_times[0])
 
-        data_values = [i.reshape([1,1,32,32,1]) for i in data_values]
-        data_values = np.concatenate(data_values, axis=0)
-        data_times = np.array(data_times)
+            data_values = [i.reshape([1,1,32,32,1]) for i in data_values]
+            data_values = np.concatenate(data_values, axis=0)
+            
+            seconds_in_day = 24*60*60
+            # data_times = [i.time() for i in data_times]
+            data_times = [i.second + i.minute * 60 + i.hour * 3600 for i in data_times]
 
+            sins = [np.sin(2*np.pi*secs/seconds_in_day) for secs in data_times]
+            coss = [np.cos(2*np.pi*secs/seconds_in_day) for secs in data_times]
+
+            data_times = np.stack([sins, coss], axis=1)
+
+            data_values_all.append(data_values)
+
+        data_values = np.concatenate(data_values_all, axis=4)
+
+        """
         features_placeholder = tf.placeholder(data_values.dtype, data_values.shape)
         time_placeholder = tf.placeholder(data_times.dtype, data_times.shape)
 
-        # dataset = tf.data.Dataset.from_tensor_slices((data_values, data_times))
-
         dataset = tf.data.Dataset.from_tensor_slices((features_placeholder, time_placeholder))
+        """
+        dataset = tf.data.Dataset.from_tensor_slices((data_values, data_times))
         print('u good to go')
 
         return dataset
