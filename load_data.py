@@ -17,7 +17,7 @@ flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train [15]')
 flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
 flags.DEFINE_integer('frame_count', 2, 'How long videos should be in frames [32]')
 flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
-flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
+flags.DEFINE_integer('channels', 3, 'Number of weather variables [1]')
 flags.DEFINE_integer('read_threads', 2, 'Read threads [16]')
 flags.DEFINE_string('mode', 'predict_1to1', 'Model name [predict or predict_1to1]')
 flags.DEFINE_string('action', 'train', 'Action of model [train, test, valid]')
@@ -69,6 +69,11 @@ dataset = dataset.batch(32)
 iterator = dataset.make_initializable_iterator()
 next_element = iterator.get_next()
 
+
+# sess.run(iterator.initializer, feed_dict={features_placeholder: features,
+                                          # labels_placeholder: labels})
+
+
 # Compute for 100 epochs.
 for i in range(10):
     print('Epoch:', i)
@@ -76,7 +81,7 @@ for i in range(10):
 
     while True:
         try:
-            print(sess.run(next_element))
+            sess.run(next_element)
         except tf.errors.OutOfRangeError:
             break
 
