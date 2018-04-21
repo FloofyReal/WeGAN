@@ -15,13 +15,12 @@ import numpy as np
 
 class InputPipeline(object):
     def __init__(self, root_dir, index_file, action, dataset, batch_size, channels=1,
-                num_epochs=1, video_frames=2, reshape_size=32):
+                wvars, video_frames=2, reshape_size=32):
         """
         :param mode: action for data [train, test, valid]
         :param root_dir: root directory containing the index_file and all the videos
         :param index_file: list of video paths relative to root_dir
         :param batch_size: size of the batches to output
-        :param num_epochs: number of epochs, use None to make infinite
         :param video_frames: number of frames every video should have in the end
                              if a video is shorter than this repeat the last frame
         :param reshape_size: videos frames are stored as 126x126 images, reshape them to
@@ -33,6 +32,7 @@ class InputPipeline(object):
         self.video_frames = video_frames
         self.reshape_size = reshape_size
         self.channels = channels
+        self.wvars = wvars
         self.params = ['Temperature', 'Cloud_cover', 'Specific_humidity', 'Logarithm_of_surface_pressure', 'Geopotential']
 
         print('DATAPIPELINE INIT')
@@ -54,14 +54,30 @@ class InputPipeline(object):
         print('Content loaded:', self.file_content)
 
         data_all = []
-        for i in range(self.channels):
-            path_linux = self.file_content[0] + '/' + self.datapath + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
-            print('Path to loaded file: ', path_linux)
 
-            with open(path_linux, 'rb') as f:
-                    data = pickle.load(f, encoding='bytes')
-                    data_all.append(data)
+        wvars = str(self.wvars)
+
+        test = 0
+        for c in wvars:
+            test =+ int(c)
+        if not test == self.channels:
+            print('U FUCKED UP M8')
+            break
+
+        # magic number 5 = number of max channels
+        for i in range(5):
+            if wvars[i] == '1':
+                path_linux = self.file_content[0] + '/' + self.datapath + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
+                print('Path to loaded file: ', path_linux)
+
+                with open(path_linux, 'rb') as f:
+                        data = pickle.load(f, encoding='bytes')
+                        data_all.append(data)
         
+        path_to_meta = self.file_content[0] + '/' + self.datapath + '/' + 'meta' + '_' + self.datapath + '.pkl'
+        with open(path_to_meta,'rb') as f:
+            self.meta = pickle.load(f)
+
         data_values_all = []
         for data in data_all:
             data_values = [i[0] for i in data]
@@ -86,42 +102,58 @@ class InputPipeline(object):
         data_times = np.stack([sins, coss], axis=1)
         data_times = data_times.astype(np.float32)
 
-
         del data
         del data_all
         print('u good to go')
 
         return data_values, data_times
 
-    def __normalize_v2(self, data):
-        minn = np.amin(data)
-        maxx = np.amax(data)
-        
-        normalized = (data - minn) / (maxx - minn)
-        normalized -= 0.5
-        return normalized, minn, maxx
+    def __normalize_v3(self, data, mean, std):
+        return data-mean/std
 
-    def __preprocess(self, data):
+    def __preprocess(self, data, times):
         """
-        output shape:
-        [self.video_frames x self.reshape_size x self.reshape_size x self.channels]
+        output shape (numpy array):
+        [all_steps x self.video_frames x self.reshape_size x self.reshape_size x self.channels]
         """
         # shape = tf.shape(data)
-        print('Original data shape:', len(data), data[0].shape)
-        normal, minn, maxx = self.__normalize_v2(data)
-        print('Normalized data shape:', len(normal), normal[0].shape)
+        minmax = []
+        normals = []
+        print('Original data shape:', data.shape)
+        for p,c in zip(self.params, self.wvars):
+            if c == '1':
+                normal = self.__normalize_v3(data[:,:,:,:,i], self.meta[p+'_mean'], self.meta[p+'_std'])
+                normals.append(normal.reshape(-1,1,self.reshape_size,self.reshape_size,1))
+        normals = normals.concatenate(normals, axis=4)
+        print('Normalized data shape:', normals.shape)
+        
         seq_list = []
-        for x in range(len(normal)-self.video_frames):
+        time_list = []
+        for x in range(normals.shape[0]-self.video_frames):
             seq_tensor = tf.convert_to_tensor(normal[x:self.video_frames+x], np.float32)
             # print(seq_tensor.shape, self.reshape_size)
-            seq_tensor = tf.reshape(seq_tensor, [self.video_frames, self.reshape_size, self.reshape_size, self.channels])
+            seq_tensor = tf.reshape(seq_tensor, [1, self.video_frames, self.reshape_size, self.reshape_size, self.channels])
             seq_list.append(seq_tensor)
+            time_tensor = tf.convert_to_tensor(times[x:self.video_frames+x], np.float32)
+            time_tensor = tf.reshape(time_tensor, [1, self.video_frames, 2])
+            time_list.append(time_tensor)
+
         print('Shape of 1 frame/state of weather', seq_tensor.shape)
         print('Num of all weather frames/states', len(seq_list))
-        random.shuffle(seq_list)
-        return seq_list, minn, maxx
+
+        c = list(zip(seq_list, time_list))
+
+        random.shuffle(c)
+
+        seq_list, time_list = zip(*c)
+        seq_list = np.concatenate(seq_list, axis=0)
+        time_list = np.concatenate(time_list, axis=0)
+        print('Final array shape:', seq_list.shape)
+        print('Final time shape:', time_list.shape)
+        return seq_list, time_list
 
     def input_pipeline(self):
         values, times = self.__init_dataset()
+        values = self.__preprocess(values)
         # return dataset, 0, 100
         return values, times
