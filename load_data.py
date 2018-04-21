@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 import numpy as np
-from data.input_pipeline import InputPipeline
+from data.input_pipeline_new import InputPipeline
 from utils.utils import denormalize_v2, write_image, sampleBatch
 
 config = tf.ConfigProto()
@@ -20,6 +20,7 @@ flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
 flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
 flags.DEFINE_integer('read_threads', 2, 'Read threads [16]')
 flags.DEFINE_string('mode', 'predict_1to1', 'Model name [predict or predict_1to1]')
+flags.DEFINE_string('action', 'train', 'Action of model [train, test, valid]')
 flags.DEFINE_string('experiment_name', 'test', 'Log directory')
 flags.DEFINE_string('checkpoint', 'cp-74600', 'checkpoint to recover')
 flags.DEFINE_string('root_dir', '.',
@@ -46,14 +47,16 @@ for path in [experiment_dir, checkpoint_dir, sample_dir, log_dir]:
 
 data_set = InputPipeline(params.root_dir,
                          params.index_file,
-                         params.read_threads,
-                         params.batch_size,
-                         params.channels,
+                         read_threads=params.read_threads,
+                         action=params.action,
+                         batch_size=params.batch_size,
+                         channels=params.channels,
                          num_epochs=params.num_epochs,
                          video_frames=params.frame_count,
                          reshape_size=params.crop_size)
 
-batch, minn, maxx = data_set.input_pipeline()
+# batch, minn, maxx = data_set.input_pipeline()
+dataset = data_set.input_pipeline()
 
 
 coord = tf.train.Coordinator()
@@ -62,17 +65,36 @@ init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initial
 sess.run(init_op)
 threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
+dataset = dataset.batch(32)
+iterator = dataset.make_initializable_iterator()
+next_element = iterator.get_next()
+
+# Compute for 100 epochs.
+for i in range(10):
+    print('Epoch:', i)
+    sess.run(iterator.initializer)
+
+    while True:
+        try:
+            print(sess.run(next_element))
+        except tf.errors.OutOfRangeError:
+            break
+
+
+
+"""
 for i in range(10):
     print(str(i*params.batch_size))
-    print(sess.run(batch))
-    print(batch.shape)
-    """
+
+    print(sess.run(iterator.initializer, feed_dict={features_placeholder: features,
+                                            labels_placeholder: labels})
+    # print(sess.run(batch))
+    # print(batch.shape)
     batch_z = np.random.normal(0.0, 1.0, size=[params.batch_size, params.z_dim]).astype(np.float32)
     feed_dict = {model.z_vec: batch_z}
     x = sess.run(model.videos_fake, feed_dict=feed_dict)
     x = denormalize_v2(x, minn, maxx)
     write_batch(x, sample_dir, 'test_', i, 16, 8)
-    """
 
 i = 0
 try:
@@ -88,6 +110,8 @@ finally:
     # When done, ask the threads to stop and write final checkpoint
     print('Final checkpoint ..')
     coord.request_stop()
+
+"""
 #
 # Shut everything down
 #
