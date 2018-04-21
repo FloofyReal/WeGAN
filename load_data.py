@@ -18,8 +18,8 @@ flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
 flags.DEFINE_integer('frame_count', 2, 'How long videos should be in frames [32]')
 flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
 flags.DEFINE_integer('channels', 3, 'Number of weather variables [1]')
-flags.DEFINE_integer('read_threads', 2, 'Read threads [16]')
 flags.DEFINE_string('mode', 'predict_1to1', 'Model name [predict or predict_1to1]')
+flags.DEFINE_string('dataset', '32x32', 'Size of a map [32x32 or 64x64]')
 flags.DEFINE_string('action', 'train', 'Action of model [train, test, valid]')
 flags.DEFINE_string('experiment_name', 'test', 'Log directory')
 flags.DEFINE_string('checkpoint', 'cp-74600', 'checkpoint to recover')
@@ -47,8 +47,8 @@ for path in [experiment_dir, checkpoint_dir, sample_dir, log_dir]:
 
 data_set = InputPipeline(params.root_dir,
                          params.index_file,
-                         read_threads=params.read_threads,
                          action=params.action,
+                         dataset=params.dataset,
                          batch_size=params.batch_size,
                          channels=params.channels,
                          num_epochs=params.num_epochs,
@@ -57,13 +57,13 @@ data_set = InputPipeline(params.root_dir,
 
 # batch, minn, maxx = data_set.input_pipeline()
 dataset = data_set.input_pipeline()
+print(dataset.output_types)
+print(dataset.output_shapes)
 
 
-coord = tf.train.Coordinator()
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
-threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
 dataset = dataset.batch(32)
 iterator = dataset.make_initializable_iterator()
@@ -120,7 +120,4 @@ finally:
 #
 # Shut everything down
 #
-coord.request_stop()
-# Wait for threads to finish.
-coord.join(threads)
 sess.close()

@@ -14,13 +14,12 @@ import random
 import numpy as np
 
 class InputPipeline(object):
-    def __init__(self, root_dir, index_file, read_threads, action, batch_size, channels=1,
+    def __init__(self, root_dir, index_file, action, dataset, batch_size, channels=1,
                 num_epochs=1, video_frames=2, reshape_size=32):
         """
         :param mode: action for data [train, test, valid]
         :param root_dir: root directory containing the index_file and all the videos
         :param index_file: list of video paths relative to root_dir
-        :param read_threads: number of threads used for parallel reading
         :param batch_size: size of the batches to output
         :param num_epochs: number of epochs, use None to make infinite
         :param video_frames: number of frames every video should have in the end
@@ -29,7 +28,7 @@ class InputPipeline(object):
                              reduce the dimensionality
         """
         self.action = action
-        self.read_threads = read_threads
+        self.datapath = dataset
         self.batch_size = batch_size
         self.video_frames = video_frames
         self.reshape_size = reshape_size
@@ -56,7 +55,7 @@ class InputPipeline(object):
 
         data_all = []
         for i in range(self.channels):
-            path_linux = self.file_content[0] + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
+            path_linux = self.file_content[0] + '/' + self.datapath + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
             print('Path to loaded file: ', path_linux)
 
             with open(path_linux, 'rb') as f:
@@ -82,6 +81,7 @@ class InputPipeline(object):
             coss = [np.cos(2*np.pi*secs/seconds_in_day) for secs in data_times]
 
             data_times = np.stack([sins, coss], axis=1)
+            data_times = data_times.astype(np.float32)
 
             data_values_all.append(data_values)
 
