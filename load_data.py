@@ -70,8 +70,6 @@ iterator = dataset.make_initializable_iterator()
 next_element = iterator.get_next()
 
 
-sess.run(iterator.initializer, feed_dict={features_placeholder: features,
-                                          labels_placeholder: labels})
 
 
 # Compute for 100 epochs.
@@ -83,7 +81,9 @@ for i in range(10):
     while True:
         try:
             k += 1
-            sess.run(next_element)
+
+            sess.run(iterator.initializer, feed_dict={features_placeholder: values,
+                                          time_placeholder: times})
         except tf.errors.OutOfRangeError:
             print('Steps:', k)
             break
