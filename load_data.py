@@ -79,10 +79,13 @@ for i in range(10):
     print('Epoch:', i)
     sess.run(iterator.initializer)
 
+    k = 0
     while True:
         try:
+            k += 1
             sess.run(next_element)
         except tf.errors.OutOfRangeError:
+            print('Steps:', k)
             break
 
 
