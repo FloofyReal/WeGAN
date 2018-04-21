@@ -56,7 +56,7 @@ data_set = InputPipeline(params.root_dir,
                          reshape_size=params.crop_size)
 
 # batch, minn, maxx = data_set.input_pipeline()
-dataset = data_set.input_pipeline()
+dataset, values, times = data_set.input_pipeline()
 print(dataset.output_types)
 print(dataset.output_shapes)
 
@@ -70,8 +70,8 @@ iterator = dataset.make_initializable_iterator()
 next_element = iterator.get_next()
 
 
-# sess.run(iterator.initializer, feed_dict={features_placeholder: features,
-                                          # labels_placeholder: labels})
+sess.run(iterator.initializer, feed_dict={features_placeholder: features,
+                                          labels_placeholder: labels})
 
 
 # Compute for 100 epochs.
