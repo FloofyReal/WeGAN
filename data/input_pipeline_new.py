@@ -61,8 +61,6 @@ class InputPipeline(object):
             with open(path_linux, 'rb') as f:
                     data = pickle.load(f, encoding='bytes')
                     data_all.append(data)
-
-        data = 0
         
         data_values_all = []
         for data in data_all:
@@ -72,14 +70,12 @@ class InputPipeline(object):
             # print('Data[0] value:', data_values[0])
             # print('Data[1] value:', data_times[0])
 
-            data_values = [i.reshape([1,1,32,32,1]) for i in data_values]
+            data_values = [i.reshape([1,1,self.reshape_size,self.reshape_size,1]) for i in data_values]
             data_values = np.concatenate(data_values, axis=0)
             
             data_values_all.append(data_values)
 
         data_values = np.concatenate(data_values_all, axis=4)
-
-        data_all = 0
 
         seconds_in_day = 24*60*60
         data_times = [i.second + i.minute * 60 + i.hour * 3600 for i in data_times]
@@ -96,6 +92,8 @@ class InputPipeline(object):
 
         dataset = tf.data.Dataset.from_tensor_slices((features_placeholder, time_placeholder))
         """
+        del data
+        del data_all
         print('u good to go')
 
         return tf.data.Dataset.from_tensor_slices((data_values, data_times))
@@ -110,8 +108,7 @@ class InputPipeline(object):
 
     def __preprocess(self, data):
         """
-        takes a image of horizontally stacked video frames and transforms
-        it to a tensor of shape:
+        output shape:
         [self.video_frames x self.reshape_size x self.reshape_size x self.channels]
         """
         # shape = tf.shape(data)
@@ -131,13 +128,5 @@ class InputPipeline(object):
 
     def input_pipeline(self):
         dataset = self.__init_dataset()
-
-        """
-        seq_list, minn, maxx = self.__preprocess(data)
-        video_batch = tf.train.batch([seq_list], batch_size=self.batch_size,
-                                     # TODO(Bernhard): check if read_threads here actually speeds things up
-                                     num_threads=self.read_threads, capacity=self.batch_size * 4, enqueue_many=True,
-                                     shapes=[self.video_frames, self.reshape_size, self.reshape_size, self.channels])
-        """
         # return dataset, 0, 100
         return dataset
