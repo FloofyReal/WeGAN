@@ -59,6 +59,7 @@ data_set = InputPipeline(params.root_dir,
 # batch, minn, maxx = data_set.input_pipeline()
 values, times = data_set.input_pipeline()
 
+print('shape in main:',values.shape)
 
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
