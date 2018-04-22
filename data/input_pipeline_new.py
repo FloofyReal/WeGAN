@@ -14,8 +14,8 @@ import random
 import numpy as np
 
 class InputPipeline(object):
-    def __init__(self, root_dir, index_file, action, dataset, batch_size, channels=1,
-                wvars, video_frames=2, reshape_size=32):
+    def __init__(self, root_dir, index_file, action, dataset, batch_size, wvars, channels=1,
+                 video_frames=2, reshape_size=32):
         """
         :param mode: action for data [train, test, valid]
         :param root_dir: root directory containing the index_file and all the videos
@@ -59,10 +59,9 @@ class InputPipeline(object):
 
         test = 0
         for c in wvars:
-            test =+ int(c)
+            test += int(c)
         if not test == self.channels:
             print('U FUCKED UP M8')
-            break
 
         # magic number 5 = number of max channels
         for i in range(5):
@@ -74,7 +73,7 @@ class InputPipeline(object):
                         data = pickle.load(f, encoding='bytes')
                         data_all.append(data)
         
-        path_to_meta = self.file_content[0] + '/' + self.datapath + '/' + 'meta' + '_' + self.datapath + '.pkl'
+        path_to_meta = self.file_content[0] + '/' + self.datapath + '/' + 'meta' + self.datapath + '.pkl'
         with open(path_to_meta,'rb') as f:
             self.meta = pickle.load(f)
 
@@ -104,7 +103,6 @@ class InputPipeline(object):
 
         del data
         del data_all
-        print('u good to go')
 
         return data_values, data_times
 
@@ -120,40 +118,40 @@ class InputPipeline(object):
         minmax = []
         normals = []
         print('Original data shape:', data.shape)
+        i = 0
         for p,c in zip(self.params, self.wvars):
             if c == '1':
                 normal = self.__normalize_v3(data[:,:,:,:,i], self.meta[p+'_mean'], self.meta[p+'_std'])
                 normals.append(normal.reshape(-1,1,self.reshape_size,self.reshape_size,1))
-        normals = normals.concatenate(normals, axis=4)
+                i += 1
+        normals = np.concatenate(normals, axis=4)
         print('Normalized data shape:', normals.shape)
         
-        seq_list = []
-        time_list = []
-        for x in range(normals.shape[0]-self.video_frames):
-            seq_tensor = tf.convert_to_tensor(normal[x:self.video_frames+x], np.float32)
-            # print(seq_tensor.shape, self.reshape_size)
-            seq_tensor = tf.reshape(seq_tensor, [1, self.video_frames, self.reshape_size, self.reshape_size, self.channels])
-            seq_list.append(seq_tensor)
-            time_tensor = tf.convert_to_tensor(times[x:self.video_frames+x], np.float32)
-            time_tensor = tf.reshape(time_tensor, [1, self.video_frames, 2])
-            time_list.append(time_tensor)
+        seq_tensor = [tf.convert_to_tensor(normals[x:x+self.video_frames], np.float32) for x in range(normals.shape[0]-self.video_frames)]
+        seq_tensor = [tf.reshape(tt, [1, self.video_frames, self.reshape_size, self.reshape_size, self.channels]) for tt in seq_tensor]
 
-        print('Shape of 1 frame/state of weather', seq_tensor.shape)
-        print('Num of all weather frames/states', len(seq_list))
+        time_tensor = [x for x in range(times.shape[0]-self.videos)
+        # time_tensor = [tf.convert_to_tensor(times[x:self.video_frames+x], np.float32) for x in range(normals.shape[0]-self.video_frames)]
+        # time_tensor = [tf.reshape(tt, [1, self.video_frames, 2]) for tt in time_tensor]
 
-        c = list(zip(seq_list, time_list))
+        print('Shape of 1 frame/state of weather', seq_tensor[0].shape)
+        print('Num of all weather frames/states', len(seq_tensor))
 
-        random.shuffle(c)
+        seq_list = np.array(seq_tensor)
+        time_list = np.array(time_tensor)
 
-        seq_list, time_list = zip(*c)
-        seq_list = np.concatenate(seq_list, axis=0)
-        time_list = np.concatenate(time_list, axis=0)
+        del seq_tensor
+        del time_tensor
+
         print('Final array shape:', seq_list.shape)
         print('Final time shape:', time_list.shape)
+
         return seq_list, time_list
 
     def input_pipeline(self):
         values, times = self.__init_dataset()
-        values = self.__preprocess(values)
-        # return dataset, 0, 100
+        print('data initialized')
+        values, times = self.__preprocess(values, times)
+        print('data sequenced and normalized')
+        # return dataset
         return values, times
