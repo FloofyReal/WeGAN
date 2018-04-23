@@ -20,16 +20,21 @@ def f_denormalize(data, mean, std):
     denormal = (data*std)+mean
     return denormal
 
-def denormalize(data, wvars, reshape_size, frame_count, meta)
+def denormalize(data, wvars, reshape_size, frame_count, channels, meta):
     """
     Returns list of denormalized data.
     """
+    data = data.reshape(-1,frame_count,reshape_size,reshape_size,channels)
+    i = 0
     params = ['Temperature', 'Cloud_cover', 'Specific_humidity', 'Logarithm_of_surface_pressure', 'Geopotential']
     denormals = []
     for p,c in zip(params, wvars):
         if c == '1':
             denormal = f_denormalize(data[:,:,:,:,i], meta[p+'_mean'], meta[p+'_std'])
             denormals.append(denormal.reshape(-1,frame_count,reshape_size,reshape_size,1))
+            i += 1
+    if not i == channels:
+        print('something is really bad')
     return denormals
 
 
