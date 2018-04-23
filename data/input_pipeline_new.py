@@ -137,6 +137,7 @@ class InputPipeline(object):
         print('Num of all weather frames/states', len(seq_tensor))
 
         seq_list = np.array(seq_tensor)
+        seq_list = seq_list.reshape([-1, self.video_frames, self.reshape_size, self.reshape_size, self.channels])
         time_list = np.array(time_tensor)
 
         del seq_tensor
