@@ -4,7 +4,7 @@ import time
 import tensorflow as tf
 
 from utils.layers import conv2d, conv3d_transpose, dis_block, linear
-from utils.utils import sampleBatch, saveGIFBatch, write_image
+from utils.utils import save_image
 
 
 class ImprovedVideoGANFuture(object):
@@ -167,7 +167,7 @@ class ImprovedVideoGANFuture(object):
             self.g_adam_first = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1, beta2=0.999) \
                 .minimize(self.gen_reg, var_list=self.generator_variables)
 
-        self.sample = sampleBatch(self.videos_fake, self.batch_size, self.minn, self.maxx)
+        self.sample = self.videos_fake
         self.summary_op = tf.summary.merge_all()
 
     def _train(self, loss_val, var_list, optimizer):
@@ -212,10 +212,10 @@ class ImprovedVideoGANFuture(object):
             # images = 0 state images
             images = session.run(self.videos)[:, 0, :, :, :]
             print('saving original')
-            write_image(images, sample_dir, 'vid_%d_f0' % step)
+            save_image(images, sample_dir, 'vid_%d_f0' % step)
             vid_sample = session.run(self.sample, feed_dict={self.input_images: images})
             print('saving fakes')
-            saveGIFBatch(vid_sample, sample_dir, 'vid_%d_future' % step)
+            save_image(vid_sample, sample_dir, 'vid_%d_future' % step)
 
 
 def add_activation_summary(var):

@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 
 from utils.layers import conv3d_transpose, dis_block, linear
-from utils.utils import sampleBatch, saveGIFBatch
+from utils.utils import save_image
 
 
 class ImprovedVideoGAN(object):
@@ -130,7 +130,7 @@ class ImprovedVideoGAN(object):
         for var in self.discriminator_variables:
             print(var.name)
 
-        self.sample = sampleBatch(self.videos_fake, self.batch_size)
+        self.sample = self.videos_fake
         self.summary_op = tf.summary.merge_all()
 
     def get_feed_dict(self):
@@ -165,7 +165,7 @@ class ImprovedVideoGAN(object):
 
         if generate_sample:
             vid_sample = session.run(self.sample, feed_dict=feed_dict)
-            saveGIFBatch(vid_sample, sample_dir, 'vid_%d' % step)
+            save_image(vid_sample, sample_dir, 'vid_%d' % step)
 
 
 def add_activation_summary(var):
