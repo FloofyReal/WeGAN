@@ -8,16 +8,6 @@ import pickle
 import numpy as np
 
 
-def saveGIFBatch(batch, directory, name=''):
-    """
-    save gif frames into pickle
-    """
-    fin_name = directory + '/future_' + name + '.pkl'
-    print('save gif as: %s', fin_name)
-    with open(fin_name, 'wb') as f:
-        pickle.dump(batch, f, pickle.HIGHEST_PROTOCOL)
-
-
 def get_all_files(source_path, filename):
     fullpath = source_path + filename
     f = []
@@ -26,21 +16,28 @@ def get_all_files(source_path, filename):
         break
     return f
 
+def f_denormalize(data, mean, std):
+    denormal = (data*std)+mean
+    return denormal
 
-def denormalize_v2(data, minn, maxx):
-    diff = maxx - minn
-    
-    data += 0.5
-    denormalized = (data * diff) + minn
-    return denormalized
+def denormalize(data, wvars, reshape_size, frame_count, meta)
+    """
+    Returns list of denormalized data.
+    """
+    params = ['Temperature', 'Cloud_cover', 'Specific_humidity', 'Logarithm_of_surface_pressure', 'Geopotential']
+    denormals = []
+    for p,c in zip(params, wvars):
+        if c == '1':
+            denormal = f_denormalize(data[:,:,:,:,i], meta[p+'_mean'], meta[p+'_std'])
+            denormals.append(denormal.reshape(-1,frame_count,reshape_size,reshape_size,1))
+    return denormals
 
 
-def sampleBatch(samples, batch_size, minn, maxx):
-    return denormalize_v2(samples, minn, maxx)
-
-
-def write_image(batch, sample_dir, name):
-    fin_name = sample_dir + '/image_' + name + '.pkl'
+def save_image(batch, sample_dir, name='def'):
+    """
+    Save an input file [image, batch, numpy array] into output pickle.
+    """
+    fin_name = sample_dir + '/sample_' + name + '.pkl'
     print('save image as: %s', fin_name)
     with open(fin_name, 'wb') as f:
         pickle.dump(batch, f, pickle.HIGHEST_PROTOCOL)
