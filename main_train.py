@@ -3,7 +3,7 @@ Code to train the generation model
 
 """
 from data.input_pipeline_new import InputPipeline
-from utils.utils import denormalize_v3, write_image, sampleBatch
+from utils.utils import denormalize
 
 from model.improved_video_gan import ImprovedVideoGAN
 from model.improved_video_gan_future import ImprovedVideoGANFuture
@@ -41,9 +41,9 @@ flags.DEFINE_string('root_dir', '.',
 flags.DEFINE_string('index_file', 'my-index-file.txt', 'Index file referencing all videos relative to root_dir')
 
 flags.DEFINE_string('experiment_name', 'testytest_deleteme', 'Log directory')
-flags.DEFINE_integer('output_every', 25, 'output loss to stdout every xx steps')
-flags.DEFINE_integer('sample_every', 200, 'generate random samples from generator every xx steps')
-flags.DEFINE_integer('save_model_every', 200, 'save complete model and parameters every xx steps')
+flags.DEFINE_integer('output_every', 30, 'output loss to stdout every xx steps')
+flags.DEFINE_integer('sample_every', 90, 'generate random samples from generator every xx steps')
+flags.DEFINE_integer('save_model_every', 90, 'save complete model and parameters every xx steps')
 
 flags.DEFINE_bool('recover_model', False, 'recover model')
 flags.DEFINE_string('model_name', 'small_v1', 'checkpoint file if not latest one')
@@ -83,6 +83,44 @@ data_set = InputPipeline(params.root_dir,
 values, times, meta = data_set.input_pipeline()
 print("DATAPIPELINE DONE")
 
+values_placeholder = tf.placeholder(values.dtype, values.shape)
+time_placeholder = tf.placeholder(times.dtype, times.shape)
+
+dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
+
+print(dataset.output_types)
+print(values.shape, times.shape)
+print(dataset.output_shapes)
+
+dataset = dataset.shuffle(50000)
+# dataset = dataset.batch(params.batch_size)
+dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(params.batch_size))
+iterator = dataset.make_initializable_iterator()
+next_element = iterator.get_next()
+#
+# set up model
+#
+if params.mode == 'predict':
+    model = ImprovedVideoGANFuture(input_batch=next_element[0],
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+elif params.mode == 'predict_1to1':
+    model = ImprovedVideoGANFutureOne(input_batch=next_element[0],
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   wvars=params.wvars,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+else:
+    raise Exception("unknown training mode")
 
 print('Model setup DONE')
 
@@ -99,42 +137,6 @@ summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
 # Initialize the variables (like the epoch counter).
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
-
-values_placeholder = tf.placeholder(values.dtype, values.shape)
-time_placeholder = tf.placeholder(times.dtype, times.shape)
-
-dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
-print(dataset.output_types)
-print(dataset.output_shapes)
-
-dataset = dataset.shuffle(50000)
-dataset = dataset.batch(params.batch_size)
-iterator = dataset.make_initializable_iterator()
-next_element = iterator.get_next()
-#
-# set up model
-#
-if params.mode == 'predict':
-    model = ImprovedVideoGANFuture(input_batch=next_element,
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
-                                   critic_iterations=4)
-elif params.mode == 'predict_1to1':
-    model = ImprovedVideoGANFutureOne(input_batch=next_element,
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   wvars=params.vwars,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
-                                   critic_iterations=4)
-else:
-    raise Exception("unknown training mode")
 
 #
 # Recover Model
@@ -166,7 +168,6 @@ with open(os.path.join(experiment_dir, 'hyperparams_{}.txt'.format(i)), 'w+') as
     f.write('beta1 (adam): %f\n' % params.beta1)  # TODO make beta parametrizable in BEGAN as well
     f.close()
 
-
 #
 # TRAINING
 #
@@ -180,12 +181,11 @@ for e in range(params.num_epochs):
         try:
             model.train(sess, i, summary_writer=summary_writer, log_summary=(i % params.output_every == 0),
                         sample_dir=sample_dir, generate_sample=(i % params.sample_every == 0), meta=meta)
-            if i % params.save_model_every == 0:
-                print('Backup model ..')
-                saver.save(sess, os.path.join(checkpoint_dir, 'cp'), global_step=i)
             i += 1
         except tf.errors.OutOfRangeError:
             print('Steps:', i)
+            print('Backup model ..')
+            saver.save(sess, os.path.join(checkpoint_dir, 'cp'), global_step=i)
             break
 
 print('Done training -- epoch limit reached')
