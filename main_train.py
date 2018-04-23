@@ -2,9 +2,8 @@
 Code to train the generation model
 
 """
-from __future__ import print_function
-
-from data.input_pipeline import InputPipeline
+from data.input_pipeline_new import InputPipeline
+from utils.utils import denormalize_v3, write_image, sampleBatch
 
 from model.improved_video_gan import ImprovedVideoGAN
 from model.improved_video_gan_future import ImprovedVideoGANFuture
@@ -23,18 +22,19 @@ print('Go Go Power Rangers!!!')
 # input flags
 #
 flags = tf.app.flags
-flags.DEFINE_string('mode', 'predict', 'one of [predict, predict_1to1]')
-flags.DEFINE_integer('num_epochs', 1, 'Number of epochs to train [15]')
+flags.DEFINE_string('mode', 'predict_1to1', 'one of [predict, predict_1to1]')
+flags.DEFINE_integer('num_epochs', 15, 'Number of epochs to train [15]')
 flags.DEFINE_integer('batch_size', 64, 'Batch size [16]')
 flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
-flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
 flags.DEFINE_integer('frame_count', 2, 'How long videos should be in frames [32]')
+flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
 flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
-
-flags.DEFINE_integer('read_threads', 8, 'Read threads [16]')
-
 flags.DEFINE_float('learning_rate', 0.001, 'Learning rate (alpha) for Adam [0.1]')
 flags.DEFINE_float('beta1', 0.5, 'Beta parameter for Adam [0.5]')
+flags.DEFINE_string('wvars', '11100' , 'Define which weather variables are in use [T|CC|SH|SP|GEO] [11100]')
+
+flags.DEFINE_string('dataset', '32x32', 'Size of a map [32x32 or 64x64]')
+flags.DEFINE_string('action', 'train', 'Action of model [train, test, valid]')
 
 flags.DEFINE_string('root_dir', '.',
                     'Directory containing all videos and the index file')
@@ -73,43 +73,16 @@ for path in [experiment_dir, checkpoint_dir, sample_dir, log_dir]:
 #
 data_set = InputPipeline(params.root_dir,
                          params.index_file,
-                         params.read_threads,
-                         params.batch_size,
-                         params.channels,
-                         num_epochs=params.num_epochs,
+                         action=params.action,
+                         dataset=params.dataset,
+                         batch_size=params.batch_size,
+                         channels=params.channels,
+                         wvars=params.wvars,
                          video_frames=params.frame_count,
                          reshape_size=params.crop_size)
-batch, minn, maxx = data_set.input_pipeline()
-
+values, times, meta = data_set.input_pipeline()
 print("DATAPIPELINE DONE")
-#
-# set up model
-#
 
-if params.mode == 'predict':
-    model = ImprovedVideoGANFuture(input_batch=batch,
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   minn=minn,
-                                   maxx=maxx,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
-                                   critic_iterations=4)
-elif params.mode == 'predict_1to1':
-    model = ImprovedVideoGANFutureOne(input_batch=batch,
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   minn=minn,
-                                   maxx=maxx,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
-                                   critic_iterations=4)
-else:
-    raise Exception("unknown training mode")
 
 print('Model setup DONE')
 
@@ -119,8 +92,6 @@ print('Model setup DONE')
 
 # Saver for model.
 saver = tf.train.Saver()
-# Coordinator for threads in queues etc.
-coord = tf.train.Coordinator()
 # Create a session for running operations in the Graph.
 sess = tf.Session(config=config)
 # Create a summary writer
@@ -128,8 +99,42 @@ summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
 # Initialize the variables (like the epoch counter).
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
-# Start input enqueue threads.
-threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+values_placeholder = tf.placeholder(values.dtype, values.shape)
+time_placeholder = tf.placeholder(times.dtype, times.shape)
+
+dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
+print(dataset.output_types)
+print(dataset.output_shapes)
+
+dataset = dataset.shuffle(50000)
+dataset = dataset.batch(params.batch_size)
+iterator = dataset.make_initializable_iterator()
+next_element = iterator.get_next()
+#
+# set up model
+#
+if params.mode == 'predict':
+    model = ImprovedVideoGANFuture(input_batch=next_element,
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+elif params.mode == 'predict_1to1':
+    model = ImprovedVideoGANFutureOne(input_batch=next_element,
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   wvars=params.vwars,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+else:
+    raise Exception("unknown training mode")
 
 #
 # Recover Model
@@ -168,26 +173,26 @@ with open(os.path.join(experiment_dir, 'hyperparams_{}.txt'.format(i)), 'w+') as
 
 kt = 0.0
 lr = params.learning_rate
-try:
-    while not coord.should_stop():
-        model.train(sess, i, summary_writer=summary_writer, log_summary=(i % params.output_every == 0),
-                    sample_dir=sample_dir, generate_sample=(i % params.sample_every == 0))
-        if i % params.save_model_every == 0:
-            print('Backup model ..')
-            saver.save(sess, os.path.join(checkpoint_dir, 'cp'), global_step=i)
-        i += 1
+for e in range(params.num_epochs):
+    print('Epoch:', e)
+    sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
+    while True:
+        try:
+            model.train(sess, i, summary_writer=summary_writer, log_summary=(i % params.output_every == 0),
+                        sample_dir=sample_dir, generate_sample=(i % params.sample_every == 0), meta=meta)
+            if i % params.save_model_every == 0:
+                print('Backup model ..')
+                saver.save(sess, os.path.join(checkpoint_dir, 'cp'), global_step=i)
+            i += 1
+        except tf.errors.OutOfRangeError:
+            print('Steps:', i)
+            break
 
-except tf.errors.OutOfRangeError:
-    print('Done training -- epoch limit reached')
-finally:
-    # When done, ask the threads to stop and write final checkpoint
-    saver.save(sess, os.path.join(checkpoint_dir, 'final'), global_step=i)
-    coord.request_stop()
+print('Done training -- epoch limit reached')
+# When done, write final checkpoint
+saver.save(sess, os.path.join(checkpoint_dir, 'final'), global_step=i)
 
 #
 # Shut everything down
 #
-coord.request_stop()
-# Wait for threads to finish.
-coord.join(threads)
 sess.close()
