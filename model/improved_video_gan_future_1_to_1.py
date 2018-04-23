@@ -4,18 +4,17 @@ import time
 import tensorflow as tf
 
 from utils.layers import conv2d, conv3d_transpose, dis_block, linear
-from utils.utils import sampleBatch, saveGIFBatch, write_image
+from utils.utils import denormalize, save_image
 
 
 class ImprovedVideoGANFutureOne(object):
     def __init__(self,
                  input_batch,
                  batch_size=64,
-                 frame_size=32,
+                 frame_size=2,
                  crop_size=32,
                  channels=1,
-                 minn=250,
-                 maxx=350,
+                 wvars='11100',
                  learning_rate=0.0002,
                  beta1=0.5,
                  critic_iterations=5):
@@ -27,8 +26,7 @@ class ImprovedVideoGANFutureOne(object):
         self.learning_rate = learning_rate
         self.frame_size = frame_size
         self.videos = input_batch
-        self.minn = minn
-        self.maxx = maxx
+        self.wvars = wvars
         self.build_model()
 
     def generator(self, img_batch):
@@ -184,7 +182,7 @@ class ImprovedVideoGANFutureOne(object):
             self.g_adam_first = tf.train.AdamOptimizer(learning_rate=self.learning_rate, beta1=self.beta1, beta2=0.999) \
                 .minimize(self.gen_reg, var_list=self.generator_variables)
 
-        self.sample = sampleBatch(self.videos_fake, self.batch_size, self.minn, self.maxx)
+        self.sample = self.videos_fake
         self.summary_op = tf.summary.merge_all()
 
     def _train(self, loss_val, var_list, optimizer):
@@ -204,7 +202,8 @@ class ImprovedVideoGANFutureOne(object):
               summary_writer=None,
               log_summary=False,
               sample_dir=None,
-              generate_sample=False):
+              generate_sample=False,
+              meta=None):
         if log_summary:
             start_time = time.time()
 
@@ -229,11 +228,15 @@ class ImprovedVideoGANFutureOne(object):
         if generate_sample:
             # images = 0 state images
             images = session.run(self.videos)[:, 0, :, :, :]
+            forecast_sample = session.run(self.sample, feed_dict={self.input_images: images})
+
+            images = denormalize_v3(images, self.wvars, self.crop_size, self.frame_size, meta)
             print('saving original')
-            write_image(images, sample_dir, 'vid_%d_f0' % step)
-            vid_sample = session.run(self.sample, feed_dict={self.input_images: images})
-            print('saving fakes')
-            saveGIFBatch(vid_sample, sample_dir, 'vid_%d_future' % step)
+            save_image(images, sample_dir, 'init_%d_image' % step)
+
+            forecast = denormalize_v3(forecast, self.wvars, self.crop_size, self.frame_size, meta)
+            print('saving forecast / fakes')
+            save_image(forecast, sample_dir, 'gen_%d_future' % step)
 
 
 def add_activation_summary(var):
