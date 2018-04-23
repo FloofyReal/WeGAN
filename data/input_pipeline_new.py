@@ -107,7 +107,8 @@ class InputPipeline(object):
         return data_values, data_times
 
     def __normalize_v3(self, data, mean, std):
-        return data-mean/std
+        normal = (data-mean)/std
+        return normal
 
     def __preprocess(self, data, times):
         """
@@ -149,4 +150,4 @@ class InputPipeline(object):
         values, times = self.__preprocess(values, times)
         print('Data sequenced and normalized')
         # return dataset
-        return values, times
+        return values, times, self.meta
