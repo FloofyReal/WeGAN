@@ -127,15 +127,10 @@ class InputPipeline(object):
         normals = np.concatenate(normals, axis=4)
         print('Normalized data shape:', normals.shape)
         
-        # seq_tensor = [tf.convert_to_tensor(normals[x:x+self.video_frames], np.float32) for x in range(normals.shape[0]-self.video_frames)]
-        # seq_tensor = [tf.reshape(tt, [1, self.video_frames, self.reshape_size, self.reshape_size, self.channels]) for tt in seq_tensor]
-
         seq_tensor = [normals[x:x+self.video_frames] for x in range(normals.shape[0]-self.video_frames)]
         seq_tensor = [tt.reshape([1, self.video_frames, self.reshape_size, self.reshape_size, self.channels]) for tt in seq_tensor]
 
         time_tensor = [x for x in range(times.shape[0]-self.video_frames)]
-        # time_tensor = [tf.convert_to_tensor(times[x:self.video_frames+x], np.float32) for x in range(normals.shape[0]-self.video_frames)]
-        # time_tensor = [tf.reshape(tt, [1, self.video_frames, 2]) for tt in time_tensor]
 
         print('Shape of 1 frame/state of weather', seq_tensor[0].shape)
         print('Num of all weather frames/states', len(seq_tensor))
@@ -146,15 +141,12 @@ class InputPipeline(object):
         del seq_tensor
         del time_tensor
 
-        print('Final array shape:', seq_list.shape)
-        print('Final time shape:', time_list.shape)
-
         return seq_list, time_list
 
     def input_pipeline(self):
         values, times = self.__init_dataset()
-        print('data initialized')
+        print('Data initialized')
         values, times = self.__preprocess(values, times)
-        print('data sequenced and normalized')
+        print('Data sequenced and normalized')
         # return dataset
         return values, times
