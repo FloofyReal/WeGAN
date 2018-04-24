@@ -41,9 +41,9 @@ flags.DEFINE_string('root_dir', '.',
 flags.DEFINE_string('index_file', 'my-index-file.txt', 'Index file referencing all videos relative to root_dir')
 
 flags.DEFINE_string('experiment_name', 'testytest_deleteme', 'Log directory')
-flags.DEFINE_integer('output_every', 30, 'output loss to stdout every xx steps')
-flags.DEFINE_integer('sample_every', 90, 'generate random samples from generator every xx steps')
-flags.DEFINE_integer('save_model_every', 90, 'save complete model and parameters every xx steps')
+flags.DEFINE_integer('output_every', 34, 'output loss to stdout every xx steps')
+flags.DEFINE_integer('sample_every', 136, 'generate random samples from generator every xx steps')
+flags.DEFINE_integer('save_model_every', 136, 'save complete model and parameters every xx steps')
 
 flags.DEFINE_bool('recover_model', False, 'recover model')
 flags.DEFINE_string('model_name', 'small_v1', 'checkpoint file if not latest one')
