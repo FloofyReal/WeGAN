@@ -66,7 +66,7 @@ class InputPipeline(object):
         # magic number 5 = number of max channels
         for i in range(5):
             if wvars[i] == '1':
-                path_linux = self.file_content[0] + '/' + self.datapath + '/' + self.action + '_' + self.params[i] + '_' + '32x32' + '.pkl'
+                path_linux = self.file_content[0] + '/' + self.datapath + '/' + self.action + '_' + self.params[i] + '_' + self.datapath + '.pkl'
                 print('Path to loaded file: ', path_linux)
 
                 with open(path_linux, 'rb') as f:
