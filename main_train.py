@@ -191,6 +191,7 @@ for e in range(params.num_epochs):
 print('Done training -- epoch limit reached')
 # When done, write final checkpoint
 saver.save(sess, os.path.join(checkpoint_dir, 'final'), global_step=i)
+print('We donezo')
 
 #
 # Shut everything down
