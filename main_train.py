@@ -93,7 +93,6 @@ print(values.shape, times.shape)
 print(dataset.output_shapes)
 
 dataset = dataset.shuffle(50000)
-# dataset = dataset.batch(params.batch_size)
 dataset = dataset.apply(tf.contrib.data.batch_and_drop_remainder(params.batch_size))
 iterator = dataset.make_initializable_iterator()
 next_element = iterator.get_next()
