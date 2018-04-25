@@ -1,126 +1,156 @@
-from model.improved_video_gan import ImprovedVideoGAN
+from model.improved_video_gan_future import ImprovedVideoGANFuture
+from model.improved_video_gan_future_1_to_1 import ImprovedVideoGANFutureOne
 
 import os
 import tensorflow as tf
 import numpy as np
-from data.input_pipeline import InputPipeline
-
-from PIL import Image
-
-def write_batch(batch, sample_dir, name, it, rows, cols):
-    batch = batch.astype('uint8')
-    batch_size, frames, crop_size, _, _ = np.shape(batch)
-    for i in range(frames):
-        _write_image(batch, sample_dir, name, i, rows, cols)
-    cmd = "ffmpeg -f image2 -i "+sample_dir +'/'+ name+'_'+"%d.png "+sample_dir+'/'+name+str(it)+".gif"
-    print cmd
-    os.system(cmd)
-    for frame in range(frames):
-        filename = os.path.join(sample_dir, "%s_%d.png" % (name, frame))
-        os.remove(filename)
-
-
-def _write_image(batch, sample_dir, name, frame, rows, cols):
-    batch_size, _, croop_size,_, _ = np.shape(batch)
-    image = np.zeros((croop_size * rows, croop_size * cols, 3), dtype='uint8')
-    index = 0
-    for i in range(rows):
-        for j in range(cols):
-            image[i * croop_size:(i + 1) * croop_size, j * croop_size:(j + 1) * croop_size, :] = batch[index, frame, :, :, :]
-            index +=1
-    im = Image.fromarray(np.asarray(np.clip(image, 0, 255), dtype="uint8"), "RGB")
-    im.save(os.path.join(sample_dir, "%s_%d.png" % (name, frame)))
-
-#
-# Configuration for running on ETH GPU cluster
-#
-os.environ['CUDA_VISIBLE_DEVICES'] = os.environ['SGE_GPU']
+from data.input_pipeline_new import InputPipeline
+from utils.utils import denormalize, save_image
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 config.allow_soft_placement = True
 
+print('What time it is? Its testing time!')
 #
 # input flags
 #
 flags = tf.app.flags
-flags.DEFINE_integer('batch_size', 128, 'Batch size [16]')
-flags.DEFINE_integer('crop_size', 64, 'Crop size to shrink videos [64]')
-flags.DEFINE_integer('frame_count', 32, 'How long videos should be in frames [32]')
+flags.DEFINE_string('mode', 'predict_1to1', 'Model name [predict or predict_1to1]')
+flags.DEFINE_integer('batch_size', 64, 'Batch size [16]')
+flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
+flags.DEFINE_integer('frame_count', 2, 'How long videos should be in frames [32]')
+flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
 flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
-flags.DEFINE_string('experiment_name', 'iWGAN_golf_advanced_newObjective', 'Log directory')
-flags.DEFINE_string('checkpoint', 'cp-74600', 'checkpoint to recover')
-flags.DEFINE_string('root_dir', '/srv/glusterfs/kratzwab/yt-bb-airplanes',
+flags.DEFINE_string('wvars', '11100' , 'Define which weather variables are in use [T|CC|SH|SP|GEO] [11100]')
+
+flags.DEFINE_string('dataset', '32x32', 'Size of a map [32x32 or 64x64]')
+flags.DEFINE_string('action', 'test', 'Action of model [train, test, valid]')
+
+#EXACT CHECKPOINT TO SAMPLE FROM
+flags.DEFINE_string('checkpoint', 'cp-final', 'checkpoint to recover')
+
+flags.DEFINE_string('experiment_name', 'test', 'Log directory')
+flags.DEFINE_string('root_dir', '.',
                     'Directory containing all videos and the index file')
 flags.DEFINE_string('index_file', 'my-index-file.txt', 'Index file referencing all videos relative to root_dir')
 params = flags.FLAGS
-
 
 #
 # make sure all necessary directories are created
 #
 # experiment_dir = os.path.join('.', params.experiment_name)
-path_dir = os.path.join('c:', os.sep, 'experiments')
+path_dir = '/home/rafajdus/experiments'
 experiment_dir = os.path.join(path_dir, params.experiment_name)
 checkpoint_dir = os.path.join(experiment_dir, 'checkpoints')
 sample_dir = os.path.join(experiment_dir, 'samples')
 log_dir = os.path.join(experiment_dir, 'logs')
 
-if not os.path.exists(sample_dir):
-    os.mkdir(sample_dir)
+print('PATHS TO FILES OF EXPERIMENT:')
+print('Samples: ', sample_dir)
+print('Checkpoints: ', checkpoint_dir)
+print('Logs: ', log_dir)
+
+for path in [experiment_dir, checkpoint_dir, sample_dir, log_dir]:
+    if not os.path.exists(path):
+        os.mkdir(path)
 
 
-model = ImprovedVideoGANFuture(input_batch=batch,
-                                batch_size=params.batch_size,
-                                frame_size=params.frame_count,
-                                crop_size=params.crop_size,
-                                channels=params.channels,
-                                minn=minn,
-                                maxx=maxx,
-                                learning_rate=params.learning_rate,
-                                beta1=params.beta1,
-                                critic_iterations=4)
-
-model = ImprovedVideoGAN(tf.random_uniform([params.batch_size, params.frame_count, params.crop_size, params.crop_size, 3]),
-                  alpha1=0.1,
-                  batch_size=params.batch_size,
-                  frame_size=params.frame_count,
-                  crop_size=params.crop_size,
-                  learning_rate=0,
-                  z_dim=params.z_dim,
-                  beta1=0)
 data_set = InputPipeline(params.root_dir,
-                      params.index_file,
-                      12,
-                      params.batch_size,
-                      num_epochs=10,
-                      video_frames=params.frame_count,
-                      reshape_size=params.crop_size)
-batch = data_set.input_pipeline()
+                         params.index_file,
+                         action=params.action,
+                         dataset=params.dataset,
+                         batch_size=params.batch_size,
+                         channels=params.channels,
+                         wvars=params.wvars,
+                         video_frames=params.frame_count,
+                         reshape_size=params.crop_size)
+values, times = data_set.input_pipeline()
+
+
+if params.mode == 'predict':
+    model = ImprovedVideoGANFuture(input_batch=batch,
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   wvars=params.vwars,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+elif params.mode == 'predict_1to1':
+    model = ImprovedVideoGANFutureOne(input_batch=batch,
+                                   batch_size=params.batch_size,
+                                   frame_size=params.frame_count,
+                                   crop_size=params.crop_size,
+                                   channels=params.channels,
+                                   wvars=params.vwars,
+                                   learning_rate=params.learning_rate,
+                                   beta1=params.beta1,
+                                   critic_iterations=4)
+else:
+    raise Exception("unknown training mode")
 
 #
 # Set up coordinator, session and thread queues
 #
 saver = tf.train.Saver()
-coord = tf.train.Coordinator()
 
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
+
+values_placeholder = tf.placeholder(values.dtype, values.shape)
+time_placeholder = tf.placeholder(times.dtype, times.shape)
+
+dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
+print(dataset.output_types)
+print(dataset.output_shapes)
+
+# dataset = dataset.batch(self.batch_size)
+iterator = dataset.make_initializable_iterator()
+next_element = iterator.get_next()
+# LOAD PRE-TRAINED MODEL
 saver.restore(sess, os.path.join(checkpoint_dir,params.checkpoint))
-threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
-for i in range(5):
-    batch_z = np.random.normal(0.0, 1.0, size=[params.batch_size, params.z_dim]).astype(np.float32)
-    feed_dict = {model.z_vec: batch_z}
-    x = sess.run(model.videos_fake, feed_dict=feed_dict)
-    x = (x + 1)*127.5
-    write_batch(x, sample_dir, 'test_', i, 16, 8)
+sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
 
+global_rmse = 0
+i = 1
+while True:
+    try:
+        # images = zero state of weather
+        original_sequence = sess.run(next_element[0])
+        images = original_sequence[:,0,:,:,:]
+        # generate forecast from state zero
+        forecast = sess.run(self.sample, feed_dict={self.input_images: images})
+
+        rmse = np.sqrt(np.mean(np.square(original_sequence - forecast)))
+        global_rmse += rmse
+
+        original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_count, self.channels, meta)
+        forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_count, self.channels, meta)
+
+        minn = np.min(forecast)
+        maxx = np.max(forecast)
+        distribution_size = maxx - minn
+        real_error = distribution_size * rmse
+
+        print("Step: %d, RMSE: %g, RealError: %g" % (i, rmse, real_error))
+        if i % 1000 == 0:
+            print('saving original')
+            save_image(original_sequence, sample_dir, 'init_%d_image' % step)
+            print('saving forecast / fakes')
+            save_image(forecast, sample_dir, 'gen_%d_future' % step)
+        i += 1
+    except tf.errors.OutOfRangeError:
+        print("Global RMSE: %g" % (global_rmse/i))
+        break
+
+
+print('Testo donezo')
 #
 # Shut everything down
 #
-coord.request_stop()
 # Wait for threads to finish.
-coord.join(threads)
 sess.close()
