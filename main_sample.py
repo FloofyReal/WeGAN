@@ -108,7 +108,7 @@ else:
 #
 # Set up coordinator, session and thread queues
 #
-saver = tf.train.Saver()
+saver = tf.train.Saver(tf.trainable_variables())
 
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -127,38 +127,24 @@ else:
 
 sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
 
-global_rmse = 0
+weather_params = ['Temperature', 'Cloud_cover', 'Specific_humidity', 'Logarithm_of_surface_pressure', 'Geopotential']
+
+global_rmse_temp = 0
+global_rmse_cc = 0
+global_rmse_sh = 0
+global_rmse_sp = 0
+global_rmse_geo = 0
+global_rmse = [global_rmse_temp, global_rmse_cc, global_rmse_sh, global_rmse_sp, global_rmse_geo]
 i = 1
 while True:
     try:
-        # images = zero state of weather
-        original_sequence = sess.run(next_element[0])
-        original_sequence = original_sequence.reshape([1, params.frame_count, params.crop_size, params.crop_size, params.channels])
-        print(original_sequence.shape)
-        images = original_sequence[:,0,:,:,:]
-        # generate forecast from state zero
-        forecast = sess.run(self.sample, feed_dict={self.input_images: images})
-
-        rmse = np.sqrt(np.mean(np.square(original_sequence - forecast)))
-        global_rmse += rmse
-
-        original_sequence = denormalize(original_sequence, params.wvars, params.crop_size, params.frame_count, params.channels, meta)
-        forecast = denormalize(forecast, params.wvars, params.crop_size, params.frame_count, params.channels, meta)
-
-        minn = np.min(forecast)
-        maxx = np.max(forecast)
-        distribution_size = maxx - minn
-        real_error = distribution_size * rmse
-
-        print("Step: %d, RMSE: %g, RealError: %g" % (i, rmse, real_error))
-        if i % 1000 == 0:
-            print('saving original')
-            save_image(original_sequence, sample_dir, 'init_%d_image' % step)
-            print('saving forecast / fakes')
-            save_image(forecast, sample_dir, 'gen_%d_future' % step)
+        rmse_all = model.test(sess, i, sample_dir=sample_dir, meta=meta)
+        for er,k in zip(rmse_all, range(len(global_rmse)):
+            global_rmse[k] += er
         i += 1
     except tf.errors.OutOfRangeError:
-        print("Global RMSE: %g" % (global_rmse/i))
+        for rmse, p in zip(global_rmse, weather_params):
+            print("Global RMSE of %s: %g" % (p, global_rmse/i))
         break
 
 
