@@ -55,7 +55,9 @@ for path in [experiment_dir, checkpoint_dir, sample_dir, log_dir]:
     if not os.path.exists(path):
         os.mkdir(path)
 
-
+#
+# set up input pipeline
+#
 data_set = InputPipeline(params.root_dir,
                          params.index_file,
                          action=params.action,
@@ -65,11 +67,23 @@ data_set = InputPipeline(params.root_dir,
                          wvars=params.wvars,
                          video_frames=params.frame_count,
                          reshape_size=params.crop_size)
-values, times = data_set.input_pipeline()
+values, times, meta = data_set.input_pipeline()
+print("DATAPIPELINE DONE")
 
+values_placeholder = tf.placeholder(values.dtype, values.shape)
+time_placeholder = tf.placeholder(times.dtype, times.shape)
+
+dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
+
+print(dataset.output_types)
+print(values.shape, times.shape)
+print(dataset.output_shapes)
+
+iterator = dataset.make_initializable_iterator()
+next_element = iterator.get_next()
 
 if params.mode == 'predict':
-    model = ImprovedVideoGANFuture(input_batch=batch,
+    model = ImprovedVideoGANFuture(input_batch=next_element[0],
                                    batch_size=params.batch_size,
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,
@@ -79,7 +93,7 @@ if params.mode == 'predict':
                                    beta1=params.beta1,
                                    critic_iterations=4)
 elif params.mode == 'predict_1to1':
-    model = ImprovedVideoGANFutureOne(input_batch=batch,
+    model = ImprovedVideoGANFutureOne(input_batch=next_element[0],
                                    batch_size=params.batch_size,
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,
@@ -99,17 +113,6 @@ saver = tf.train.Saver()
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
-
-values_placeholder = tf.placeholder(values.dtype, values.shape)
-time_placeholder = tf.placeholder(times.dtype, times.shape)
-
-dataset = tf.data.Dataset.from_tensor_slices((values_placeholder, time_placeholder))
-print(dataset.output_types)
-print(dataset.output_shapes)
-
-# dataset = dataset.batch(self.batch_size)
-iterator = dataset.make_initializable_iterator()
-next_element = iterator.get_next()
 
 # LOAD PRE-TRAINED MODEL
 # saver.restore(sess, os.path.join(checkpoint_dir,params.checkpoint))
