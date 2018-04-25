@@ -22,7 +22,7 @@ flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
 flags.DEFINE_integer('frame_count', 2, 'How long videos should be in frames [32]')
 flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
 flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
-flags.DEFINE_string('wvars', '11100' , 'Define which weather variables are in use [T|CC|SH|SP|GEO] [11100]')
+flags.DEFINE_string('wvars', '10000' , 'Define which weather variables are in use [T|CC|SH|SP|GEO] [11100]')
 
 flags.DEFINE_string('dataset', '32x32', 'Size of a map [32x32 or 64x64]')
 flags.DEFINE_string('action', 'test', 'Action of model [train, test, valid]')
