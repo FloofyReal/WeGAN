@@ -171,14 +171,15 @@ with open(os.path.join(experiment_dir, 'hyperparams_{}.txt'.format(i)), 'w+') as
 # TRAINING
 #
 
-print(tf.trainable_variables())
+for var in tf.trainable_variables():
+    print(var)
 
 kt = 0.0
 lr = params.learning_rate
 for e in range(params.num_epochs):
     print('Epoch:', e)
     sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
-    print(sess.run(tf.trainable_variables())
+    # print(sess.run(tf.trainable_variables()))
     while True:
         try:
             model.train(sess, i, summary_writer=summary_writer, log_summary=(i % params.output_every == 0),
