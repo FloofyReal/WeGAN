@@ -43,7 +43,7 @@ params = flags.FLAGS
 path_dir = '/home/rafajdus/experiments'
 experiment_dir = os.path.join(path_dir, params.experiment_name)
 checkpoint_dir = os.path.join(experiment_dir, 'checkpoints')
-sample_dir = os.path.join(experiment_dir, 'samples')
+sample_dir = os.path.join(experiment_dir, 'samples/test')
 log_dir = os.path.join(experiment_dir, 'logs')
 
 print('PATHS TO FILES OF EXPERIMENT:')
@@ -139,12 +139,12 @@ i = 1
 while True:
     try:
         rmse_all = model.test(sess, i, sample_dir=sample_dir, meta=meta)
-        for er,k in zip(rmse_all, range(len(global_rmse)):
+        for er,k in zip(rmse_all, range(len(global_rmse))):
             global_rmse[k] += er
         i += 1
     except tf.errors.OutOfRangeError:
         for rmse, p in zip(global_rmse, weather_params):
-            print("Global RMSE of %s: %g" % (p, global_rmse/i))
+            print("Global RMSE of %s: %g" % (p, rmse/i))
         break
 
 
