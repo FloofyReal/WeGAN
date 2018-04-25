@@ -127,8 +127,6 @@ print('Model setup DONE')
 # Set up coordinator, session and thread queues
 #
 
-# Saver for model.
-saver = tf.train.Saver()
 # Create a session for running operations in the Graph.
 sess = tf.Session(config=config)
 # Create a summary writer
@@ -137,10 +135,11 @@ summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
 
+# Saver for model.
+saver = tf.train.Saver(tf.trainable_variables())
 #
 # Recover Model
 #
-
 if params.recover_model:
     latest_cp = tf.train.latest_checkpoint(checkpoint_dir)
     print(latest_cp)
@@ -164,15 +163,15 @@ with open(os.path.join(experiment_dir, 'hyperparams_{}.txt'.format(i)), 'w+') as
     f.write('z_dim: %d\n' % params.z_dim)
     f.write('\nlearning\n')
     f.write('learning_rate: %f\n' % params.learning_rate)
-    f.write('beta1 (adam): %f\n' % params.beta1)  # TODO make beta parametrizable in BEGAN as well
+    f.write('beta1 (adam): %f\n' % params.beta1)
     f.close()
 
 #
 # TRAINING
 #
 
-for var in tf.trainable_variables():
-    print(var)
+# for var in tf.trainable_variables():
+#    print(var)
 
 kt = 0.0
 lr = params.learning_rate
