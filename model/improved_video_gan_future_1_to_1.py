@@ -28,6 +28,7 @@ class ImprovedVideoGANFutureOne(object):
         self.videos = input_batch
         self.wvars = wvars
         self.build_model()
+        self.params = ['Temperature', 'Cloud_cover', 'Specific_humidity', 'Logarithm_of_surface_pressure', 'Geopotential']
 
     def generator(self, img_batch):
         with tf.variable_scope('g_') as vs:
@@ -137,6 +138,20 @@ class ImprovedVideoGANFutureOne(object):
 
         self.d_cost = tf.reduce_mean(self.d_fake) - tf.reduce_mean(self.d_real)
 
+        self.rmse_temp = 0
+        self.rmse_cc = 0
+        self.rmse_sp = 0
+        self.rmse_sh = 0
+        self.rmse_geo = 0
+        self.rmse_all = [self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo]
+        par = 0
+        for p,c,rmseself in zip(self.params, self.wvars, self.rmse_all):
+            if c == '1':
+                rmse_loc = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(self.videos[:,:,:,:,par], self.videos_fake[:,:,:,:,par]))))
+                rmseself = rmse_loc
+                tf.summary.scalar('RMSE_'+p, rmse_loc)
+                par += 1
+
         self.rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(self.videos, self.videos_fake))))
 
         # self.mae = tf.metrics.mean_absolute_error(self.videos_fake, self.videos)
@@ -148,7 +163,7 @@ class ImprovedVideoGANFutureOne(object):
         # error of - saying fake is fake and original is original (when fake == orig and orig == fake)
         tf.summary.scalar("d_cost", self.d_cost)
         
-        tf.summary.scalar("RMSE", self.rmse)
+        tf.summary.scalar("RMSE_overal", self.rmse)
         # tf.summary.tensor_summary("MAE", self.mae)
 
         alpha = tf.random_uniform(
@@ -217,17 +232,21 @@ class ImprovedVideoGANFutureOne(object):
         session.run(self.g_adam_first, feed_dict=feed_dict)
 
         if log_summary:
-            g_loss_pure, g_reg, d_loss_val, rmse, fake_min, fake_max, summary = session.run(
-                [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse, self.fake_min, self.fake_max, self.summary_op],
+            g_loss_pure, g_reg, d_loss_val, rmse_all, fake_min, fake_max, summary = session.run(
+                [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse_all, self.fake_min, self.fake_max, self.summary_op],
                 feed_dict=feed_dict)
             summary_writer.add_summary(summary, step)
-            print("Time: %g/itr, Step: %d, generator loss: (%g + %g), discriminator_loss: %g, rmse: %g" % (
-                time.time() - start_time, step, g_loss_pure, g_reg, d_loss_val, rmse))
+            print("Time: %g/itr, Step: %d, generator loss: (%g + %g), discriminator_loss: %g" % (
+                time.time() - start_time, step, g_loss_pure, g_reg, d_loss_val))
+            print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (rmse_all[0], rmse_all[1], rmse_all[2], rmse_all[3], rmse_all[4]))
             print("Fake_vid min: %g, max: %g" % (fake_min, fake_max))
 
         if generate_sample:
+            original_sequence = sess.run(self.videos)
+            original_sequence = original_sequence.reshape([1, self.frame_count, self.crop_size, self.crop_size, self.channels])
+            print(original_sequence.shape)
             # images = zero state of weather
-            images = session.run(self.videos)[:, 0, :, :, :]
+            images = original_sequence[:,0,:,:,:]
             # generate forecast from state zero
             forecast = session.run(self.sample, feed_dict={self.input_images: images})
 
@@ -238,6 +257,46 @@ class ImprovedVideoGANFutureOne(object):
             forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
             print('saving forecast / fakes')
             save_image(forecast, sample_dir, 'gen_%d_future' % step)
+
+    def test(self,
+              session,
+              step,
+              sample_dir=None,
+              meta=None):
+        if log_summary:
+            start_time = time.time()
+
+        feed_dict = get_feed_dict(session)
+
+        rmse_all = session.run(self.rmse_all, feed_dict=feed_dict)
+
+        original_sequence = sess.run(self.videos)
+        original_sequence = original_sequence.reshape([1, self.frame_count, self.crop_size, self.crop_size, self.channels])
+        print(original_sequence.shape)
+        # images = zero state of weather
+        images = original_sequence[:,0,:,:,:]
+        # generate forecast from state zero
+        forecast = sess.run(self.sample, feed_dict={self.input_images: images})
+
+        denorm_original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
+        denorm_forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
+
+        minn = np.min(denorm_forecast)
+        maxx = np.max(denorm_forecast)
+        dist_size = maxx - minn
+
+        print("Step: %d" % (i))
+        print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
+            rmse_all[0], rmse_all[1], rmse_all[2], rmse_all[3], rmse_all[4]))
+        print("AbsoluteError - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
+            rmse_all[0]*dist_size, rmse_all[1]*dist_size, rmse_all[2]*dist_size, rmse_all[3]*dist_size, rmse_all[4]*dist_size))
+        if step % 1000 == 0:
+            print('saving original')
+            save_image(denorm_original_sequence, sample_dir, 'init_%d_image' % step)
+            print('saving forecast / fakes')
+            save_image(denorm_forecast, sample_dir, 'gen_%d_future' % step)
+
+        return rmse_all
 
 
 def add_activation_summary(var):
