@@ -226,13 +226,14 @@ class ImprovedVideoGANFutureOne(object):
             print("Fake_vid min: %g, max: %g" % (fake_min, fake_max))
 
         if generate_sample:
-            # images = 0 state images
+            # images = zero state of weather
             images = session.run(self.videos)[:, 0, :, :, :]
+            # generate forecast from state zero
             forecast = session.run(self.sample, feed_dict={self.input_images: images})
 
-            images = denormalize(images, self.wvars, self.crop_size, 1, self.channels, meta)
+            original_sequence = denormalize(self.videos, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
             print('saving original')
-            save_image(images, sample_dir, 'init_%d_image' % step)
+            save_image(original_sequence, sample_dir, 'init_%d_image' % step)
 
             forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
             print('saving forecast / fakes')
