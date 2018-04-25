@@ -34,7 +34,7 @@ def denormalize(data, wvars, reshape_size, frame_count, channels, meta):
             denormals.append(denormal.reshape(-1,frame_count,reshape_size,reshape_size,1))
             i += 1
     if not i == channels:
-        print('something is really bad')
+        print('------------- something is really bad  ---------------------')
     return denormals
 
 
