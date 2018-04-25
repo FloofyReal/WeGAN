@@ -17,7 +17,7 @@ print('What time it is? Its testing time!')
 #
 flags = tf.app.flags
 flags.DEFINE_string('mode', 'predict_1to1', 'Model name [predict or predict_1to1]')
-flags.DEFINE_integer('batch_size', 64, 'Batch size [16]')
+flags.DEFINE_integer('batch_size', 1, 'Batch size [16]')
 flags.DEFINE_integer('crop_size', 32, 'Crop size to shrink videos [64]')
 flags.DEFINE_integer('frame_count', 2, 'How long videos should be in frames [32]')
 flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
@@ -88,9 +88,9 @@ if params.mode == 'predict':
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,
                                    channels=params.channels,
-                                   wvars=params.vwars,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
+                                   wvars=params.wvars,
+                                   learning_rate=0.1,
+                                   beta1=0.1,
                                    critic_iterations=4)
 elif params.mode == 'predict_1to1':
     model = ImprovedVideoGANFutureOne(input_batch=next_element[0],
@@ -98,9 +98,9 @@ elif params.mode == 'predict_1to1':
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,
                                    channels=params.channels,
-                                   wvars=params.vwars,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
+                                   wvars=params.wvars,
+                                   learning_rate=0.1,
+                                   beta1=0.1,
                                    critic_iterations=4)
 else:
     raise Exception("unknown training mode")
@@ -133,6 +133,8 @@ while True:
     try:
         # images = zero state of weather
         original_sequence = sess.run(next_element[0])
+        original_sequence = original_sequence.reshape([1, params.frame_count, params.crop_size, params.crop_size, params.channels])
+        print(original_sequence.shape)
         images = original_sequence[:,0,:,:,:]
         # generate forecast from state zero
         forecast = sess.run(self.sample, feed_dict={self.input_images: images})
@@ -140,8 +142,8 @@ while True:
         rmse = np.sqrt(np.mean(np.square(original_sequence - forecast)))
         global_rmse += rmse
 
-        original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_count, self.channels, meta)
-        forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_count, self.channels, meta)
+        original_sequence = denormalize(original_sequence, params.wvars, params.crop_size, params.frame_count, params.channels, meta)
+        forecast = denormalize(forecast, params.wvars, params.crop_size, params.frame_count, params.channels, meta)
 
         minn = np.min(forecast)
         maxx = np.max(forecast)
