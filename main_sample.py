@@ -110,8 +110,17 @@ print(dataset.output_shapes)
 # dataset = dataset.batch(self.batch_size)
 iterator = dataset.make_initializable_iterator()
 next_element = iterator.get_next()
+
 # LOAD PRE-TRAINED MODEL
-saver.restore(sess, os.path.join(checkpoint_dir,params.checkpoint))
+# saver.restore(sess, os.path.join(checkpoint_dir,params.checkpoint))
+
+latest_cp = tf.train.latest_checkpoint(checkpoint_dir)
+print('Latest checkpoint:', latest_cp)
+if latest_cp is not None:
+    print("restoring....")
+    saver.restore(sess, latest_cp)
+else:
+    raise Exception("no checkpoint found to recover")
 
 sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
 
