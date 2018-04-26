@@ -136,15 +136,21 @@ global_rmse_sp = 0
 global_rmse_geo = 0
 global_rmse = [global_rmse_temp, global_rmse_cc, global_rmse_sh, global_rmse_sp, global_rmse_geo]
 i = 1
+global_diff = [0,0,0,0,0]
 while True:
     try:
-        rmse_all = model.test(sess, i, sample_dir=sample_dir, meta=meta)
-        for er,k in zip(rmse_all, range(len(global_rmse))):
+        rmse_all, diff = model.test(sess, i, sample_dir=sample_dir, meta=meta)
+        for er, dif, k in zip(rmse_all, diff range(len(global_rmse))):
             global_rmse[k] += er
+            global_diff[k] += dif
         i += 1
     except tf.errors.OutOfRangeError:
-        for rmse, p in zip(global_rmse, weather_params):
+        for rmse, p, dif  in zip(global_rmse, weather_params, global_diff):
             print("Global RMSE of %s: %g" % (p, rmse/i))
+
+            print('Saving global and mean diffs')
+            save_image(dif, sample_dir, 'diff_global_%s' % p)
+            save_image(dif/i, sample_dir, 'diff_mean_%s' % p)
         break
 
 
