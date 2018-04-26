@@ -22,6 +22,7 @@ flags.DEFINE_string('wvars', '11100' , 'Define which weather variables are in us
 flags.DEFINE_string('mode', 'predict_1to1', 'Model name [predict or predict_1to1]')
 flags.DEFINE_string('dataset', '32x32', 'Size of a map [32x32 or 64x64]')
 flags.DEFINE_string('action', 'train', 'Action of model [train, test, valid]')
+
 flags.DEFINE_string('experiment_name', 'test', 'Log directory')
 flags.DEFINE_string('checkpoint', 'cp-74600', 'checkpoint to recover')
 flags.DEFINE_string('root_dir', '.',
@@ -56,7 +57,6 @@ data_set = InputPipeline(params.root_dir,
                          video_frames=params.frame_count,
                          reshape_size=params.crop_size)
 
-# batch, minn, maxx = data_set.input_pipeline()
 values, times = data_set.input_pipeline()
 
 print('shape in main:',values.shape)
