@@ -4,18 +4,17 @@ import time
 import tensorflow as tf
 
 from utils.layers import conv2d, conv3d_transpose, dis_block, linear
-from utils.utils import save_image
+from utils.utils import denormalize, save_image
 
 
-class ImprovedVideoGANFuture(object):
+class WeGAN1to1(object):
     def __init__(self,
                  input_batch,
                  batch_size=64,
-                 frame_size=32,
+                 frame_size=2,
                  crop_size=32,
                  channels=1,
-                 minn=250,
-                 maxx=350,
+                 wvars='11100',
                  learning_rate=0.0002,
                  beta1=0.5,
                  critic_iterations=5):
@@ -27,8 +26,7 @@ class ImprovedVideoGANFuture(object):
         self.learning_rate = learning_rate
         self.frame_size = frame_size
         self.videos = input_batch
-        self.minn = minn
-        self.maxx = maxx
+        self.wvars = wvars
         self.build_model()
 
     def generator(self, img_batch):
@@ -66,29 +64,33 @@ class ImprovedVideoGANFuture(object):
             ----------------------------------------------------------------------------------- """
             print('GENERATOR')
 
-            self.z_ = tf.reshape(self.en_h3, [self.batch_size, 1, 2, 2, 1024])
+            self.z_ = tf.reshape(self.en_h3, [self.batch_size, 2, 2, 1024])
             print(self.z_.get_shape().as_list())
 
-            self.fg_h1 = conv3d_transpose(self.z_, 1024, [self.batch_size, 1, 4, 4, 512], name='g_f_h1')
+            self.fg_h1 = tf.image.resize_images(self.z_, [4,4], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h1 = conv2d(self.fg_h1, 1024, 512, d_h=1, d_w=1, name="gen_conv1")
             self.fg_h1 = tf.nn.relu(tf.contrib.layers.batch_norm(self.fg_h1, scope='g_f_bn1'), name='g_f_relu1')
             add_activation_summary(self.fg_h1)
             print(self.fg_h1.get_shape().as_list())
 
-            self.fg_h2 = conv3d_transpose(self.fg_h1, 512, [self.batch_size, 1, 8, 8, 256], name='g_f_h2')
+            self.fg_h2 = tf.image.resize_images(self.fg_h1, [8,8], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h2 = conv2d(self.fg_h2, 512, 256, d_h=1, d_w=1, name="gen_conv2")
             self.fg_h2 = tf.nn.relu(tf.contrib.layers.batch_norm(self.fg_h2, scope='g_f_bn2'), name='g_f_relu2')
             add_activation_summary(self.fg_h2)
             print(self.fg_h2.get_shape().as_list())
 
-            self.fg_h3 = conv3d_transpose(self.fg_h2, 256, [self.batch_size, 1, 16, 16, 128], name='g_f_h3')
+            self.fg_h3 = tf.image.resize_images(self.fg_h2, [16,16], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h3 = conv2d(self.fg_h3, 256, 128, d_h=1, d_w=1, name="gen_conv3")
             self.fg_h3 = tf.nn.relu(tf.contrib.layers.batch_norm(self.fg_h3, scope='g_f_bn3'), name='g_f_relu3')
             add_activation_summary(self.fg_h3)
             print(self.fg_h3.get_shape().as_list())
 
-            self.fg_h4 = conv3d_transpose(self.fg_h3, 128, [self.batch_size, self.frame_size, self.crop_size, self.crop_size, self.channels], name='g_f_h4')
+            self.fg_h4 = tf.image.resize_images(self.fg_h3, [self.crop_size,self.crop_size], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+            self.fg_h4 = conv2d(self.fg_h4, 128, self.channels, d_h=1, d_w=1, name="gen_conv4")
             self.fg_fg = tf.nn.tanh(self.fg_h4, name='g_f_actication')
             print(self.fg_fg.get_shape().as_list())
 
-            gen_reg = tf.reduce_mean(tf.square(img_batch - self.fg_fg[:, 0, :, :, :]))
+            gen_reg = tf.reduce_mean(tf.square(img_batch - self.fg_fg))
 
         variables = tf.contrib.framework.get_variables(vs)
         return self.fg_fg, gen_reg, variables
@@ -96,11 +98,12 @@ class ImprovedVideoGANFuture(object):
     def discriminator(self, video, reuse=False):
         with tf.variable_scope('d_', reuse=reuse) as vs:
             initial_dim = self.crop_size
-            d_h0 = dis_block(video, self.channels, initial_dim, 'block1', reuse=reuse)
-            d_h1 = dis_block(d_h0, initial_dim, initial_dim * 2, 'block2', reuse=reuse)
-            d_h2 = dis_block(d_h1, initial_dim * 2, initial_dim * 4, 'block3', reuse=reuse)
-            d_h3 = dis_block(d_h2, initial_dim * 4, initial_dim * 8, 'block4', reuse=reuse)
-            d_h4 = dis_block(d_h3, initial_dim * 8, 1, 'block5', reuse=reuse, normalize=False)
+            video = tf.reshape(video, [self.batch_size, self.frame_size, self.crop_size, self.crop_size, self.channels])
+            d_h0 = dis_block(video, self.channels, initial_dim, 'block1', reuse=reuse, ddd=True)
+            d_h1 = dis_block(d_h0, initial_dim, initial_dim * 2, 'block2', reuse=reuse, ddd=True)
+            d_h2 = dis_block(d_h1, initial_dim * 2, initial_dim * 4, 'block3', reuse=reuse, ddd=True)
+            d_h3 = dis_block(d_h2, initial_dim * 4, initial_dim * 8, 'block4', reuse=reuse, ddd=True)
+            d_h4 = dis_block(d_h3, initial_dim * 8, 1, 'block5', reuse=reuse, normalize=False, ddd=True)
             d_h5 = linear(tf.reshape(d_h4, [self.batch_size, -1]), 1)
         variables = tf.contrib.framework.get_variables(vs)
         return d_h5, variables
@@ -108,10 +111,24 @@ class ImprovedVideoGANFuture(object):
     def build_model(self):
         print("Setting up model...")
 
+        # input_images = First frame of video
         self.input_images = tf.placeholder(tf.float32, [self.batch_size, self.crop_size, self.crop_size, self.channels])
         self.videos_fake, self.gen_reg, self.generator_variables = self.generator(self.input_images)
 
+        self.fake_min = tf.reduce_min(self.videos_fake)
+        self.fake_max = tf.reduce_max(self.videos_fake)
+
+        print('Shapes of videos:')
+        print('Original:')
+        print(self.videos.shape)
+        print('Generated:')
+        print(self.videos_fake.shape)
+
         self.d_real, self.discriminator_variables = self.discriminator(self.videos, reuse=False)
+
+        # merging initial frame and generated to create full forecast "video"
+        self.videos_fake = tf.stack([self.input_images, self.videos_fake], axis=1)
+
         self.d_fake, _ = self.discriminator(self.videos_fake, reuse=True)
 
         self.g_cost_pure = -tf.reduce_mean(self.d_fake)
@@ -120,8 +137,30 @@ class ImprovedVideoGANFuture(object):
 
         self.d_cost = tf.reduce_mean(self.d_fake) - tf.reduce_mean(self.d_real)
 
-        # print(self.videos.shape)
-        # print(self.videos_fake.shape)
+        self.videos = tf.reshape(self.videos, [self.batch_size, self.frame_size, self.crop_size, self.crop_size, self.channels])
+        self.videos_fake = tf.reshape(self.videos_fake, [self.batch_size, self.frame_size, self.crop_size, self.crop_size, self.channels])
+
+        help_v = [0,0,0,0,0]
+        par = 0
+        for c,k in zip(self.wvars, range(5)):
+            if c == '1':
+                help_v[k] = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(self.videos[:,:,:,:,par], self.videos_fake[:,:,:,:,par]))))
+                par += 1
+            else:
+                help_v[k] = tf.constant(0.0)
+
+        self.rmse_temp = help_v[0]
+        self.rmse_cc = help_v[1]
+        self.rmse_sh = help_v[2]
+        self.rmse_sp = help_v[3]
+        self.rmse_geo = help_v[4]
+
+        tf.summary.scalar('rmse_temp', self.rmse_temp)
+        tf.summary.scalar('rmse_cc', self.rmse_cc)
+        tf.summary.scalar('rmse_sh', self.rmse_sh)
+        tf.summary.scalar('rmse_sp', self.rmse_sp)
+        tf.summary.scalar('rmse_geo', self.rmse_geo)
+
         self.rmse = tf.sqrt(tf.reduce_mean(tf.square(tf.subtract(self.videos, self.videos_fake))))
 
         # self.mae = tf.metrics.mean_absolute_error(self.videos_fake, self.videos)
@@ -133,7 +172,7 @@ class ImprovedVideoGANFuture(object):
         # error of - saying fake is fake and original is original (when fake == orig and orig == fake)
         tf.summary.scalar("d_cost", self.d_cost)
         
-        tf.summary.scalar("RMSE", self.rmse)
+        tf.summary.scalar("RMSE_overal", self.rmse)
         # tf.summary.tensor_summary("MAE", self.mae)
 
         alpha = tf.random_uniform(
@@ -187,7 +226,8 @@ class ImprovedVideoGANFuture(object):
               summary_writer=None,
               log_summary=False,
               sample_dir=None,
-              generate_sample=False):
+              generate_sample=False,
+              meta=None):
         if log_summary:
             start_time = time.time()
 
@@ -201,21 +241,73 @@ class ImprovedVideoGANFuture(object):
         session.run(self.g_adam_first, feed_dict=feed_dict)
 
         if log_summary:
-            g_loss_pure, g_reg, d_loss_val, rmse, summary = session.run(
-                [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse, self.summary_op],
+            g_loss_pure, g_reg, d_loss_val, rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo, fake_min, fake_max, summary = session.run(
+                [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo, self.fake_min, self.fake_max, self.summary_op],
                 feed_dict=feed_dict)
             summary_writer.add_summary(summary, step)
-            print("Time: %g/itr, Step: %d, generator loss: (%g + %g), discriminator_loss: %g, rmse: %g" % (
-                time.time() - start_time, step, g_loss_pure, g_reg, d_loss_val, rmse))
+            print("Time: %g/itr, Step: %d, generator loss: (%g + %g), discriminator_loss: %g" % (
+                time.time() - start_time, step, g_loss_pure, g_reg, d_loss_val))
+            print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
+            print("Fake_vid min: %g, max: %g" % (fake_min, fake_max))
 
         if generate_sample:
-            # images = 0 state images
-            images = session.run(self.videos)[:, 0, :, :, :]
+            original_sequence = session.run(self.videos)
+            original_sequence = original_sequence.reshape([self.batch_size, self.frame_size, self.crop_size, self.crop_size, self.channels])
+            print(original_sequence.shape)
+            # images = zero state of weather
+            images = original_sequence[:,0,:,:,:]
+            # generate forecast from state zero
+            forecast = session.run(self.sample, feed_dict={self.input_images: images})
+
+            original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
             print('saving original')
-            save_image(images, sample_dir, 'vid_%d_f0' % step)
-            vid_sample = session.run(self.sample, feed_dict={self.input_images: images})
-            print('saving fakes')
-            save_image(vid_sample, sample_dir, 'vid_%d_future' % step)
+            save_image(original_sequence, sample_dir, 'init_%d_image' % step)
+
+            forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
+            print('saving forecast / fakes')
+            save_image(forecast, sample_dir, 'gen_%d_future' % step)
+
+    def test(self,
+              session,
+              step,
+              sample_dir=None,
+              meta=None):
+
+        original_sequence = session.run(self.videos)
+        original_sequence = original_sequence.reshape([1, self.frame_size, self.crop_size, self.crop_size, self.channels])
+        # print(original_sequence.shape)
+        # images = zero state of weather
+        images = original_sequence[:,0,:,:,:]
+        # generate forecast from state zero
+        forecast = session.run(self.sample, feed_dict={self.input_images: images})
+        # return all rmse-s
+        rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo = session.run(
+                [self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo], feed_dict={self.input_images: images})
+
+        denorm_original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
+        denorm_forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
+
+        diff = []
+        for orig, gen in zip(denorm_original_sequence, denorm_forecast):
+            dif = orig - gen
+            diff.append(dif[:,1,:,:,:])
+
+
+        if step % 800 == 0:
+            print("Step: %d" % (step))
+            print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
+                rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
+            # print("AbsoluteError - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
+                # rmse_temp*dist_size, rmse_cc*dist_size, rmse_sh*dist_size, rmse_sp*dist_size, rmse_geo*dist_size))
+
+            print('saving original')
+            save_image(denorm_original_sequence, sample_dir, 'init_%d_image' % step)
+            print('saving forecast / fakes')
+            save_image(denorm_forecast, sample_dir, 'gen_%d_future' % step)
+
+        rmse_all = [rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo]
+
+        return rmse_all, diff
 
 
 def add_activation_summary(var):
