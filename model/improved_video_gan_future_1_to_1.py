@@ -287,6 +287,12 @@ class ImprovedVideoGANFutureOne(object):
         denorm_original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
         denorm_forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
 
+        diff = []
+        for orig, gen in zip(denorm_original_sequence, denorm_forecast):
+            dif = orig - gen
+            diff.append(dif[:,1,:,:,:])
+
+
         if step % 800 == 0:
             print("Step: %d" % (step))
             print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
@@ -301,7 +307,7 @@ class ImprovedVideoGANFutureOne(object):
 
         rmse_all = [rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo]
 
-        return rmse_all
+        return rmse_all, diff
 
 
 def add_activation_summary(var):
