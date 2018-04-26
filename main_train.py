@@ -125,7 +125,8 @@ init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initial
 sess.run(init_op)
 
 # Saver for model.
-saver = tf.train.Saver(tf.trainable_variables())
+# saver = tf.train.Saver(tf.trainable_variables())
+saver = tf.train.Saver()
 #
 # Recover Model
 #
@@ -175,8 +176,8 @@ for e in range(params.num_epochs):
             i += 1
         except tf.errors.OutOfRangeError:
             print('Steps:', i)
-            print('Backup model ..')
-            saver.save(sess, os.path.join(checkpoint_dir, 'cp'), global_step=i)
+            # print('Backup model ..')
+            # saver.save(sess, os.path.join(checkpoint_dir, 'cp'), global_step=i)
             break
 
 print('Done training -- epoch limit reached')
