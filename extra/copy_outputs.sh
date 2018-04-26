@@ -6,4 +6,3 @@ exp=$2
 
 docker cp $name:/home/rafajdus/experiments/$exp/logs ../../experiments/$exp 
 docker cp $name:/home/rafajdus/experiments/$exp/samples ../../experiments/$exp
-docker cp $name:/home/rafajdus/WeGAN/experiments/$exp ../experiments/$exp
