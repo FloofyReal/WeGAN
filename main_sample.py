@@ -1,5 +1,4 @@
-from model.improved_video_gan_future import ImprovedVideoGANFuture
-from model.improved_video_gan_future_1_to_1 import ImprovedVideoGANFutureOne
+from model.wegan_1_to_1 import WeGAN1to1
 
 import os
 import tensorflow as tf
@@ -82,18 +81,8 @@ print(dataset.output_shapes)
 iterator = dataset.make_initializable_iterator()
 next_element = iterator.get_next()
 
-if params.mode == 'predict':
-    model = ImprovedVideoGANFuture(input_batch=next_element[0],
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   wvars=params.wvars,
-                                   learning_rate=0.1,
-                                   beta1=0.1,
-                                   critic_iterations=4)
-elif params.mode == 'predict_1to1':
-    model = ImprovedVideoGANFutureOne(input_batch=next_element[0],
+if params.mode == 'predict_1to1':
+    model = WeGAN1to1(input_batch=next_element[0],
                                    batch_size=params.batch_size,
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,

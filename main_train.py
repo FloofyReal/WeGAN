@@ -5,9 +5,7 @@ Code to train the generation model
 from data.input_pipeline_new import InputPipeline
 from utils.utils import denormalize
 
-from model.improved_video_gan import ImprovedVideoGAN
-from model.improved_video_gan_future import ImprovedVideoGANFuture
-from model.improved_video_gan_future_1_to_1 import ImprovedVideoGANFutureOne
+from model.wegan_1_to_1 import WeGAN1to1
 
 import os
 import re
@@ -99,17 +97,8 @@ next_element = iterator.get_next()
 #
 # set up model
 #
-if params.mode == 'predict':
-    model = ImprovedVideoGANFuture(input_batch=next_element[0],
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
-                                   critic_iterations=4)
-elif params.mode == 'predict_1to1':
-    model = ImprovedVideoGANFutureOne(input_batch=next_element[0],
+if params.mode == 'predict_1to1':
+    model = WeGAN1to1(input_batch=next_element[0],
                                    batch_size=params.batch_size,
                                    frame_size=params.frame_count,
                                    crop_size=params.crop_size,
