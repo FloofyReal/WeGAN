@@ -193,7 +193,11 @@ class WeGAN1to1(object):
         slopes = tf.sqrt(tf.reduce_sum(tf.square(gradients), reduction_indices=[1]))
         gradient_penalty = tf.reduce_mean((slopes - 1.) ** 2)
 
-        self.d_cost_final = self.d_cost + 10 * gradient_penalty
+        self.d_penalty = 10 * gradient_penalty
+
+        tf.summary.scalar('d_penalty', self.d_penalty)
+
+        self.d_cost_final = self.d_cost + self.d_penalty
 
         tf.summary.scalar("d_cost_penalized", self.d_cost_final)
 
