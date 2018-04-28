@@ -224,6 +224,12 @@ class WeGAN1to1(object):
         feed_dict = {self.input_images: images}
         return feed_dict
 
+    def get_feed_dict_and_orig(self, session):
+        vid = session.run(self.videos)
+        images = vid[:, 0, :, :, :]
+        feed_dict = {self.input_images: images}
+        return feed_dict, vid
+
     def train(self,
               session,
               step,
@@ -278,16 +284,18 @@ class WeGAN1to1(object):
               sample_dir=None,
               meta=None):
 
-        original_sequence = session.run(self.videos)
+        feed_dict, original_sequence = self.get_feed_dict_and_orig(session)
+
+        g_loss_pure, g_reg, d_loss_val, rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo = session.run(
+            [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo],
+            feed_dict=feed_dict)
+
         original_sequence = original_sequence.reshape([1, self.frame_size, self.crop_size, self.crop_size, self.channels])
         # print(original_sequence.shape)
         # images = zero state of weather
-        images = original_sequence[:,0,:,:,:]
         # generate forecast from state zero
-        forecast = session.run(self.sample, feed_dict={self.input_images: images})
+        forecast = session.run(self.sample, feed_dict=feed_dict)
         # return all rmse-s
-        rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo = session.run(
-                [self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo], feed_dict={self.input_images: images})
 
         denorm_original_sequence = denormalize(original_sequence, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
         denorm_forecast = denormalize(forecast, self.wvars, self.crop_size, self.frame_size, self.channels, meta)
@@ -297,13 +305,10 @@ class WeGAN1to1(object):
             dif = orig - gen
             diff.append(dif[:,1,:,:,:])
 
-
         if step % print_rate == 0:
-            print("Step: %d" % (step))
+            print("Step: %d, generator loss: (%g + %g), discriminator_loss: %g" % (step, g_loss_pure, g_reg, d_loss_val))
             print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
                 rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
-            # print("AbsoluteError - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
-                # rmse_temp*dist_size, rmse_cc*dist_size, rmse_sh*dist_size, rmse_sp*dist_size, rmse_geo*dist_size))
 
             print('saving original')
             save_image(denorm_original_sequence, sample_dir, 'init_%d_image' % step)
