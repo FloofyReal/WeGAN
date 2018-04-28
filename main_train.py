@@ -44,7 +44,7 @@ flags.DEFINE_integer('sample_every', 136, 'generate random samples from generato
 flags.DEFINE_integer('save_model_every', 136, 'save complete model and parameters every xx steps')
 
 flags.DEFINE_bool('recover_model', False, 'recover model')
-flags.DEFINE_string('checkpoint', 'final-108800', 'recover model name')
+flags.DEFINE_string('checkpoint', 'final-136001', 'recover model name')
 flags.DEFINE_string('model_name', 'bigboi', 'checkpoint file if not latest one')
 params = flags.FLAGS
 
