@@ -29,7 +29,7 @@ flags.DEFINE_integer('channels', 1, 'Number of weather variables [1]')
 flags.DEFINE_integer('z_dim', 100, 'Dimensionality of hidden features [100]')
 flags.DEFINE_float('learning_rate', 0.001, 'Learning rate (alpha) for Adam [0.1]')
 flags.DEFINE_float('beta1', 0.5, 'Beta parameter for Adam [0.5]')
-flags.DEFINE_string('wvars', '11100' , 'Define which weather variables are in use [T|CC|SH|SP|GEO] [11100]')
+flags.DEFINE_string('wvars', '11100', 'Define which weather variables are in use [T|CC|SH|SP|GEO] [11100]')
 
 flags.DEFINE_string('dataset', '32x32', 'Size of a map [32x32 or 64x64]')
 flags.DEFINE_string('action', 'train', 'Action of model [train, test, valid]')
@@ -44,7 +44,8 @@ flags.DEFINE_integer('sample_every', 136, 'generate random samples from generato
 flags.DEFINE_integer('save_model_every', 136, 'save complete model and parameters every xx steps')
 
 flags.DEFINE_bool('recover_model', False, 'recover model')
-flags.DEFINE_string('model_name', 'small_v1', 'checkpoint file if not latest one')
+flags.DEFINE_string('checkpoint', 'final-108800', 'recover model name')
+flags.DEFINE_string('model_name', 'bigboi', 'checkpoint file if not latest one')
 params = flags.FLAGS
 
 #
@@ -99,14 +100,14 @@ next_element = iterator.get_next()
 #
 if params.mode == 'predict_1to1':
     model = WeGAN1to1(input_batch=next_element[0],
-                                   batch_size=params.batch_size,
-                                   frame_size=params.frame_count,
-                                   crop_size=params.crop_size,
-                                   channels=params.channels,
-                                   wvars=params.wvars,
-                                   learning_rate=params.learning_rate,
-                                   beta1=params.beta1,
-                                   critic_iterations=4)
+                      batch_size=params.batch_size,
+                      frame_size=params.frame_count,
+                      crop_size=params.crop_size,
+                      channels=params.channels,
+                      wvars=params.wvars,
+                      learning_rate=params.learning_rate,
+                      beta1=params.beta1,
+                      critic_iterations=4)
 else:
     raise Exception("unknown training mode")
 
@@ -130,17 +131,21 @@ saver = tf.train.Saver()
 #
 # Recover Model
 #
-if params.recover_model:
-    latest_cp = tf.train.latest_checkpoint(checkpoint_dir)
-    print(latest_cp)
-    if latest_cp is not None:
-        print("restore....")
-        saver.restore(sess, latest_cp)
-        i = int(re.findall('\d+', latest_cp)[-1]) + 1
+try:
+    saver.restore(sess, os.path.join(checkpoint_dir, params.checkpoint))
+    i = int(params.checkpoint.split('-')[-1]) + 1
+except:
+    if params.recover_model:
+        latest_cp = tf.train.latest_checkpoint(checkpoint_dir)
+        print(latest_cp)
+        if latest_cp is not None:
+            print("restore....")
+            saver.restore(sess, latest_cp)
+            i = int(re.findall('\d+', latest_cp)[-1]) + 1
+        else:
+            raise Exception("no checkpoint found to recover")
     else:
-        raise Exception("no checkpoint found to recover")
-else:
-    i = 0
+        i = 0
 
 #
 # backup parameter configurations
