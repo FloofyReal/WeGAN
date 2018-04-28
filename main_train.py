@@ -172,7 +172,7 @@ for e in range(params.num_epochs):
     while True:
         try:
             model.train(sess, i, summary_writer=summary_writer, log_summary=(i % params.output_every == 0),
-                        sample_dir=sample_dir, generate_sample=False, meta=meta)
+                        sample_dir=sample_dir, generate_sample=(i % params.sample_every == 0), meta=meta)
             i += 1
         except tf.errors.OutOfRangeError:
             print('Steps:', i)
