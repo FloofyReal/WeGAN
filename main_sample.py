@@ -97,7 +97,7 @@ else:
 #
 # Set up coordinator, session and thread queues
 #
-saver = tf.train.Saver(tf.trainable_variables())
+saver = tf.train.Saver()
 
 sess = tf.Session(config=config)
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
@@ -128,14 +128,14 @@ i = 1
 global_diff = [0,0,0,0,0]
 while True:
     try:
-        rmse_all, diff = model.test(sess, i, sample_dir=sample_dir, meta=meta)
+        rmse_all, diff = model.test(sess, i, 200, sample_dir=sample_dir, meta=meta)
         for er, dif, k in zip(rmse_all, diff, range(len(global_rmse))):
             global_rmse[k] += er
             global_diff[k] += dif
         i += 1
     except tf.errors.OutOfRangeError:
         for rmse, p, dif in zip(global_rmse, weather_params, global_diff):
-            print("Global RMSE of %s: %g" % (p, rmse/i))
+            print("----------- Global RMSE of %s: %g" % (p, rmse/i))
 
             print('Saving global and mean diffs')
             save_image(dif, sample_dir, 'diff_global_%s' % p)
