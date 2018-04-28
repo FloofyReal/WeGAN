@@ -274,6 +274,7 @@ class WeGAN1to1(object):
     def test(self,
               session,
               step,
+              print_rate,
               sample_dir=None,
               meta=None):
 
@@ -297,7 +298,7 @@ class WeGAN1to1(object):
             diff.append(dif[:,1,:,:,:])
 
 
-        if step % 800 == 0:
+        if step % print_rate == 0:
             print("Step: %d" % (step))
             print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
                 rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
@@ -322,3 +323,27 @@ def add_activation_summary(var):
 def add_gradient_summary(grad, var):
     if grad is not None:
         tf.summary.histogram(var.op.name + '/gradient', grad)
+
+
+def add_images_summary(sequence):
+    # probably needs to reorder from NHWC to NCHW
+    if image.shape[-1] == 1:
+        tf.summary.image('original', image[:,0,:,:,:].reshape([32,32]))
+        tf.summary.image('forecast', image[:,1,:,:,:].reshape([32,32]))
+    if image.shape[-1] == 5:
+        tf.summary.image('original_temp', image[:,0,:,:,0].reshape([32,32]))
+        tf.summary.image('original_cc', image[:,0,:,:,1].reshape([32,32]))
+        tf.summary.image('original_sh', image[:,0,:,:,2].reshape([32,32]))
+        tf.summary.image('original_sp', image[:,0,:,:,3].reshape([32,32]))
+        tf.summary.image('original_geo', image[:,0,:,:,4].reshape([32,32]))
+
+        tf.summary.image('forecast_temp', image[:,1,:,:,0].reshape([32,32]))
+        tf.summary.image('forecast_cc', image[:,1,:,:,1].reshape([32,32]))
+        tf.summary.image('forecast_sh', image[:,1,:,:,2].reshape([32,32]))
+        tf.summary.image('forecast_sp', image[:,1,:,:,3].reshape([32,32]))
+        tf.summary.image('forecast_geo', image[:,1,:,:,4].reshape([32,32]))
+
+    """
+    plt.imshow(img1)
+    plt.savefig('init' + str(i) + '.png')
+    """
