@@ -40,8 +40,8 @@ flags.DEFINE_string('index_file', 'my-index-file.txt', 'Index file referencing a
 
 flags.DEFINE_string('experiment_name', 'testytest_deleteme', 'Log directory')
 flags.DEFINE_integer('output_every', 34, 'output loss to stdout every xx steps')
-flags.DEFINE_integer('sample_every', 136, 'generate random samples from generator every xx steps')
-flags.DEFINE_integer('save_model_every', 136, 'save complete model and parameters every xx steps')
+flags.DEFINE_integer('sample_every', 136*5, 'generate random samples from generator every xx steps')
+flags.DEFINE_integer('save_model_every', 136*5, 'save complete model and parameters every xx steps')
 
 flags.DEFINE_bool('recover_model', False, 'recover model')
 flags.DEFINE_string('checkpoint', 'final-136001', 'recover model name')
@@ -131,11 +131,11 @@ saver = tf.train.Saver()
 #
 # Recover Model
 #
-try:
-    saver.restore(sess, os.path.join(checkpoint_dir, params.checkpoint))
-    i = int(params.checkpoint.split('-')[-1]) + 1
-except:
-    if params.recover_model:
+if params.recover_model:
+    try:
+        saver.restore(sess, os.path.join(checkpoint_dir, params.checkpoint))
+        i = int(params.checkpoint.split('-')[-1]) + 1
+    except:
         latest_cp = tf.train.latest_checkpoint(checkpoint_dir)
         print(latest_cp)
         if latest_cp is not None:
@@ -144,8 +144,8 @@ except:
             i = int(re.findall('\d+', latest_cp)[-1]) + 1
         else:
             raise Exception("no checkpoint found to recover")
-    else:
-        i = 0
+else:
+    i = 0
 
 #
 # backup parameter configurations
