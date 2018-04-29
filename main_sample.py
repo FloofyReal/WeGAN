@@ -127,7 +127,7 @@ global_costs = [0,0,0,0]
 i = 1
 while True:
     try:
-        rmse_all, costs, diff = model.test(sess, i, summary_writer=summary_writer, 200, sample_dir=sample_dir, meta=meta)
+        rmse_all, costs, diff = model.test(sess, i, summary_writer=summary_writer, print_rate=200, sample_dir=sample_dir, meta=meta)
         for er, dif, k in zip(rmse_all, diff, range(len(global_rmse))):
             global_rmse[k] += er
             global_diff[k] += dif
