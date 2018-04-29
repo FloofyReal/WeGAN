@@ -251,12 +251,12 @@ class WeGAN1to1(object):
         session.run(self.g_adam_first, feed_dict=feed_dict)
 
         if log_summary:
-            g_loss_pure, g_reg, d_loss_val, rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo, fake_min, fake_max, summary = session.run(
-                [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo, self.fake_min, self.fake_max, self.summary_op],
+            g_loss_pure, g_reg, d_loss_val, d_pen, rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo, fake_min, fake_max, summary = session.run(
+                [self.g_cost_pure, self.gen_reg, self.d_cost, self.d_penalty, self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo, self.fake_min, self.fake_max, self.summary_op],
                 feed_dict=feed_dict)
             summary_writer.add_summary(summary, step)
-            print("Time: %g/itr, Step: %d, generator loss: (%g + %g), discriminator_loss: %g" % (
-                time.time() - start_time, step, g_loss_pure, g_reg, d_loss_val))
+            print("Time: %g/itr, Step: %d, generator loss: (%g + %g), discriminator_loss: (%g + %g)" % (
+                time.time() - start_time, step, g_loss_pure, g_reg, d_loss_val, d_pen))
             print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
             print("Fake_vid min: %g, max: %g" % (fake_min, fake_max))
 
@@ -280,16 +280,18 @@ class WeGAN1to1(object):
     def test(self,
               session,
               step,
+              summary_writer=None,
               print_rate,
               sample_dir=None,
               meta=None):
 
         feed_dict, original_sequence = self.get_feed_dict_and_orig(session)
 
-        g_loss_pure, g_reg, d_loss_val, rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo = session.run(
-            [self.g_cost_pure, self.gen_reg, self.d_cost, self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo],
+        g_loss_pure, g_reg, d_loss_val, d_pen, rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo, summary = session.run(
+            [self.g_cost_pure, self.gen_reg, self.d_cost, self.d_penalty, self.rmse_temp, self.rmse_cc, self.rmse_sh, self.rmse_sp, self.rmse_geo, self.summary_op],
             feed_dict=feed_dict)
 
+        summary_writer.add_summary(summary, step)
         original_sequence = original_sequence.reshape([1, self.frame_size, self.crop_size, self.crop_size, self.channels])
         # print(original_sequence.shape)
         # images = zero state of weather
@@ -306,7 +308,7 @@ class WeGAN1to1(object):
             diff.append(dif[:,1,:,:,:])
 
         if step % print_rate == 0:
-            print("Step: %d, generator loss: (%g + %g), discriminator_loss: %g" % (step, g_loss_pure, g_reg, d_loss_val))
+            print("Step: %d, generator loss: (%g + %g), discriminator_loss: (%g + %g)" % (step, g_loss_pure, g_reg, d_loss_val, d_pen))
             print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
                 rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
 
@@ -316,8 +318,9 @@ class WeGAN1to1(object):
             save_image(denorm_forecast, sample_dir, 'gen_%d_future' % step)
 
         rmse_all = [rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo]
+        costs = [g_loss_pure, g_reg, d_loss_val, d_pen]
 
-        return rmse_all, diff
+        return rmse_all, costs, diff
 
 
 def add_activation_summary(var):

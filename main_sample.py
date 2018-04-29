@@ -43,7 +43,7 @@ path_dir = '/home/rafajdus/experiments'
 experiment_dir = os.path.join(path_dir, params.experiment_name)
 checkpoint_dir = os.path.join(experiment_dir, 'checkpoints')
 sample_dir = os.path.join(experiment_dir, 'samples/test')
-log_dir = os.path.join(experiment_dir, 'logs')
+log_dir = os.path.join(experiment_dir, 'logs/test')
 
 print('PATHS TO FILES OF EXPERIMENT:')
 print('Samples: ', sample_dir)
@@ -100,6 +100,9 @@ else:
 saver = tf.train.Saver()
 
 sess = tf.Session(config=config)
+# Create a summary writer
+summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
+
 init_op = tf.group(tf.global_variables_initializer(), tf.local_variables_initializer())
 sess.run(init_op)
 
@@ -117,29 +120,31 @@ else:
 sess.run(iterator.initializer, feed_dict={values_placeholder: values, time_placeholder: times})
 
 weather_params = ['Temperature', 'Cloud_cover', 'Specific_humidity', 'Logarithm_of_surface_pressure', 'Geopotential']
-
-global_rmse_temp = 0
-global_rmse_cc = 0
-global_rmse_sh = 0
-global_rmse_sp = 0
-global_rmse_geo = 0
-global_rmse = [global_rmse_temp, global_rmse_cc, global_rmse_sh, global_rmse_sp, global_rmse_geo]
-i = 1
+global_rmse = [0,0,0,0,0]
 global_diff = [0,0,0,0,0]
+global_costs = [0,0,0,0]
+
+i = 1
 while True:
     try:
-        rmse_all, diff = model.test(sess, i, 200, sample_dir=sample_dir, meta=meta)
+        rmse_all, costs, diff = model.test(sess, i, summary_writer=summary_writer, 200, sample_dir=sample_dir, meta=meta)
         for er, dif, k in zip(rmse_all, diff, range(len(global_rmse))):
             global_rmse[k] += er
             global_diff[k] += dif
+        for cost, k in zip(global_costs, range(len(global_costs))):
+            global_costs[k] += cost
         i += 1
     except tf.errors.OutOfRangeError:
+        print('Number of steps: %d', i)
         for rmse, p, dif in zip(global_rmse, weather_params, global_diff):
             print("----------- Global RMSE of %s: %g" % (p, rmse/i))
 
             print('Saving global and mean diffs')
             save_image(dif, sample_dir, 'diff_global_%s' % p)
             save_image(dif/i, sample_dir, 'diff_mean_%s' % p)
+
+        print('----------- Mean Generator cost (%g + %g) % ' % (global_costs[0]/i, global_costs[1]/i))
+        print('----------- Mean Diskriminator/Critic cost (%g + %g) % ' % (global_costs[2]/i, global_costs[3]/i))
         break
 
 
