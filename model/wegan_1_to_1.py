@@ -281,7 +281,7 @@ class WeGAN1to1(object):
               session,
               step,
               summary_writer=None,
-              print_rate,
+              print_rate=1,
               sample_dir=None,
               meta=None):
 
@@ -309,8 +309,7 @@ class WeGAN1to1(object):
 
         if step % print_rate == 0:
             print("Step: %d, generator loss: (%g + %g), discriminator_loss: (%g + %g)" % (step, g_loss_pure, g_reg, d_loss_val, d_pen))
-            print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (
-                rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
+            print("RMSE - Temp: %g, CC: %g, SH: %g, SP: %g, Geo: %g" % (rmse_temp, rmse_cc, rmse_sh, rmse_sp, rmse_geo))
 
             print('saving original')
             save_image(denorm_original_sequence, sample_dir, 'init_%d_image' % step)
