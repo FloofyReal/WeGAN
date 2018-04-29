@@ -88,8 +88,8 @@ if params.mode == 'predict_1to1':
                                    crop_size=params.crop_size,
                                    channels=params.channels,
                                    wvars=params.wvars,
-                                   learning_rate=0.1,
-                                   beta1=0.1,
+                                   learning_rate=0.001,
+                                   beta1=0.5,
                                    critic_iterations=4)
 else:
     raise Exception("unknown training mode")
